@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
+import { testStrapiConnection } from '@/services/api';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -30,6 +31,17 @@ export default function LoginPage() {
       console.error('Login error:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleTestConnection = async () => {
+    try {
+      console.log('Testing Strapi connection...');
+      await testStrapiConnection();
+      alert('Connection test complete! Check console for details.');
+    } catch (error) {
+      console.error('Connection test failed:', error);
+      alert('Connection test failed! Check console for details.');
     }
   };
 
@@ -81,6 +93,14 @@ export default function LoginPage() {
               disabled={isLoading}
             >
               {isLoading ? 'Signing in...' : 'Sign in'}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={handleTestConnection}
+            >
+              Test Strapi Connection
             </Button>
             <p className="text-sm text-gray-600 text-center">
               Don't have an account?{' '}

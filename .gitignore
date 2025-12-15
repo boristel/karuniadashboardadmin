@@ -1,2 +1,12 @@
 .env.local
 node_modules
+
+# Markdown files (keeping only README.md)
+*.md
+!README.md
+
+# PDF files
+**/*.pdf
+
+# Document folder
+document/

@@ -18,7 +18,8 @@ import {
   Home,
   Palette,
   User,
-  MapPin
+  MapPin,
+  UserCheck
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -28,6 +29,7 @@ const navigation = [
     name: 'Master Data',
     icon: Settings,
     children: [
+      { name: 'Categories', href: '/dashboard/master-data/categories', icon: Palette },
       { name: 'Vehicle Groups', href: '/dashboard/master-data/vehicle-groups', icon: Car },
       { name: 'Vehicle Types', href: '/dashboard/master-data/vehicle-types', icon: Car },
       { name: 'Colors', href: '/dashboard/master-data/colors', icon: Palette },
@@ -35,6 +37,7 @@ const navigation = [
       { name: 'Branches', href: '/dashboard/master-data/branches', icon: MapPin },
     ]
   },
+  { name: 'User Management', href: '/dashboard/user-management', icon: UserCheck },
   { name: 'Sales Monitoring', href: '/dashboard/sales-monitoring', icon: MapIcon },
   { name: 'SPK Management', href: '/dashboard/spk-management', icon: FileText },
 ];

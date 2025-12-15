@@ -61,21 +61,79 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
+      console.log('🚀 STARTING LOGIN PROCESS');
+      console.log('📧 Email:', email);
+      console.log('🔑 Password length:', password.length);
+
       setError(null);
       setIsLoading(true);
 
       const response = await authAPI.login(email, password);
 
-      // Store JWT token
-      localStorage.setItem('jwt_token', response.jwt);
-      localStorage.setItem('user', JSON.stringify(response.user));
+      console.log('✅ AUTHENTICATION SUCCESSFUL!');
+      console.log('📦 Raw response:', response);
+      console.log('🔍 Response type:', typeof response);
+      console.log('🔍 Response keys:', Object.keys(response));
+      console.log('🔍 Response data:', JSON.stringify(response, null, 2));
 
-      setUser(response.user);
+      // Handle different response formats
+      let token, user;
+
+      console.log('🔍 Checking for token in different formats...');
+
+      if (response.jwt) {
+        console.log('✅ Found standard Strapi format (response.jwt)');
+        token = response.jwt;
+        user = response.user;
+      } else if (response.data?.token) {
+        console.log('✅ Found admin panel format (response.data.token)');
+        token = response.data.token;
+        user = response.data.user;
+      } else if (response.token) {
+        console.log('✅ Found alternative format (response.token)');
+        token = response.token;
+        user = response.user;
+      } else {
+        console.error('❌ Unexpected response format - no token found');
+        console.error('❌ Response structure:', JSON.stringify(response, null, 2));
+        throw new Error('Invalid response format from server - no authentication token found');
+      }
+
+      console.log('✅ Token extracted successfully:', token ? 'YES' : 'NO');
+      console.log('✅ User extracted successfully:', user ? 'YES' : 'NO');
+      console.log('👤 User data:', user);
+
+      // Store JWT token
+      localStorage.setItem('jwt_token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+
+      console.log('💾 Token and user stored in localStorage');
+      console.log('🔄 Setting user in context...');
+
+      setUser(user);
+
+      console.log('✅ LOGIN PROCESS COMPLETED SUCCESSFULLY');
+
     } catch (error: any) {
-      setError(error.response?.data?.error?.message || 'Login failed');
+      console.error('❌ LOGIN FAILED IN CONTEXT');
+      console.error('❌ Error object:', error);
+      console.error('❌ Error response:', error.response);
+      console.error('❌ Error response data:', error.response?.data);
+      console.error('❌ Error response status:', error.response?.status);
+      console.error('❌ Error response text:', error.response?.statusText);
+
+      // Handle different error formats
+      const errorMessage = error.response?.data?.error?.message ||
+                           error.response?.data?.message ||
+                           error.message ||
+                           'Login failed';
+
+      console.log('❌ Extracted error message:', errorMessage);
+      setError(errorMessage);
       throw error;
     } finally {
       setIsLoading(false);
+      console.log('🏁 LOGIN PROCESS FINISHED (loading: false)');
     }
   };
 
