@@ -94,8 +94,8 @@ const sampleSalesData: SalesStaff[] = [
 export default function SalesMonitoringPage() {
   const [salesData, setSalesData] = useState<SalesStaff[]>(sampleSalesData);
   const [selectedBranch, setSelectedBranch] = useState<string>('all');
-  const [map, setMap] = useState<google.maps.Map | null>(null);
-  const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
+  const [map, setMap] = useState<any | null>(null);
+  const [markers, setMarkers] = useState<any[]>([]);
   const mapRef = useRef<HTMLDivElement>(null);
 
   const branches = [
@@ -143,13 +143,13 @@ export default function SalesMonitoringPage() {
     // Clear existing markers
     markers.forEach(marker => marker.setMap(null));
 
-    const newMarkers: google.maps.Marker[] = [];
-    const bounds = new window.google.maps.LatLngBounds();
+    const newMarkers: any[] = [];
+    const bounds = new (window.google.maps.LatLngBounds as any)();
 
     salesData
       .filter(sales => selectedBranch === 'all' || sales.branch === selectedBranch)
       .forEach(sales => {
-        const marker = new window.google.maps.Marker({
+        const marker = new (window.google.maps.Marker as any)({
           position: { lat: sales.latitude, lng: sales.longitude },
           map,
           title: sales.name,
@@ -163,7 +163,7 @@ export default function SalesMonitoringPage() {
           },
         });
 
-        const infoWindow = new window.google.maps.InfoWindow({
+        const infoWindow = new (window.google.maps.InfoWindow as any)({
           content: `
             <div style="padding: 10px; min-width: 200px;">
               <h3 style="margin: 0 0 10px 0; font-weight: bold;">${sales.name}</h3>

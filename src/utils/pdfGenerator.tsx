@@ -1,3 +1,4 @@
+import React from 'react';
 import { pdf } from '@react-pdf/renderer';
 import SpkDocument from '@/components/SpkDocument';
 import { saveAs } from 'file-saver';

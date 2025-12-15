@@ -17,57 +17,30 @@ import {
 import { CRUDTable } from '@/components/CRUDTable';
 import DashboardLayout from '@/components/DashboardLayout';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import { branchesAPI } from '@/services/api';
+import { toast } from 'sonner';
 
 interface Branch {
-  id: string;
+  id: number;
+  documentId: string;
   name: string;
   address: string;
-  city: string;
-  province: string;
-  postalCode: string;
-  phone: string;
-  email: string;
   latitude: number;
   longitude: number;
-  status: 'active' | 'inactive';
-  manager: string;
+  createdAt: string;
+  updatedAt: string;
+  publishedAt: string;
+  city: string | null;
+  province: string | null;
+  phone_number: string | null;
+  whatsapp_number: string | null;
 }
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 
-const sampleData: Branch[] = [
-  {
-    id: '1',
-    name: 'Jakarta Head Office',
-    address: 'Jl. MH. Thamrin No. 9',
-    city: 'Jakarta Pusat',
-    province: 'DKI Jakarta',
-    postalCode: '10350',
-    phone: '(021) 8901234',
-    email: 'jakarta@sinarbajamotor.co.id',
-    latitude: -6.1944,
-    longitude: 106.8229,
-    status: 'active',
-    manager: 'Budi Santoso',
-  },
-  {
-    id: '2',
-    name: 'Surabaya Branch',
-    address: 'Jl. Ahmad Yani No. 45',
-    city: 'Surabaya',
-    province: 'Jawa Timur',
-    postalCode: '60281',
-    phone: '(031) 8281234',
-    email: 'surabaya@sinarbajamotor.co.id',
-    latitude: -7.2575,
-    longitude: 112.7521,
-    status: 'active',
-    manager: 'Ahmad Wijaya',
-  },
-];
-
 export default function BranchesPage() {
-  const [data, setData] = useState<Branch[]>(sampleData);
+  const [data, setData] = useState<Branch[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Branch | null>(null);
   const [formData, setFormData] = useState<Partial<Branch>>({
@@ -75,19 +48,41 @@ export default function BranchesPage() {
     address: '',
     city: '',
     province: '',
-    postalCode: '',
-    phone: '',
-    email: '',
+    phone_number: '',
+    whatsapp_number: '',
     latitude: 0,
     longitude: 0,
-    status: 'active',
-    manager: '',
   });
+
+  // Fetch data from API
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const response = await branchesAPI.find();
+      setData(response.data || []);
+    } catch (error) {
+      console.error('Failed to fetch branches:', error);
+      toast.error('Failed to load branches');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
   const mapRef = useRef<HTMLDivElement>(null);
-  const [map, setMap] = useState<google.maps.Map | null>(null);
-  const [marker, setMarker] = useState<google.maps.Marker | null>(null);
+  const [map, setMap] = useState<any | null>(null);
+  const [marker, setMarker] = useState<any | null>(null);
 
   const columns: ColumnDef<Branch>[] = [
+    {
+      accessorKey: 'id',
+      header: 'ID',
+      cell: ({ row }) => (
+        <Badge variant="outline">{row.getValue('id')}</Badge>
+      ),
+    },
     {
       accessorKey: 'name',
       header: 'Branch Name',
@@ -96,29 +91,35 @@ export default function BranchesPage() {
       ),
     },
     {
+      accessorKey: 'address',
+      header: 'Address',
+      cell: ({ row }) => (
+        <div className="text-sm text-gray-600 max-w-xs truncate">
+          {row.getValue('address')}
+        </div>
+      ),
+    },
+    {
       accessorKey: 'city',
       header: 'City',
-    },
-    {
-      accessorKey: 'province',
-      header: 'Province',
-    },
-    {
-      accessorKey: 'manager',
-      header: 'Manager',
-    },
-    {
-      accessorKey: 'phone',
-      header: 'Phone',
-    },
-    {
-      accessorKey: 'status',
-      header: 'Status',
       cell: ({ row }) => (
-        <Badge variant={row.getValue('status') === 'active' ? 'default' : 'secondary'}>
-          {row.getValue('status')}
-        </Badge>
+        <div className="text-sm">{row.getValue('city') || '-'}</div>
       ),
+    },
+    {
+      accessorKey: 'phone_number',
+      header: 'Phone',
+      cell: ({ row }) => (
+        <div className="text-sm">{row.getValue('phone_number') || '-'}</div>
+      ),
+    },
+    {
+      accessorKey: 'createdAt',
+      header: 'Created',
+      cell: ({ row }) => {
+        const date = new Date(row.getValue('createdAt'));
+        return <div className="text-sm text-gray-600">{date.toLocaleDateString()}</div>;
+      },
     },
   ];
 
@@ -152,7 +153,7 @@ export default function BranchesPage() {
         draggable: true,
       });
 
-      mapMarker.addListener('dragend', (event: google.maps.MapMouseEvent) => {
+      mapMarker.addListener('dragend', (event: any) => {
         const lat = event.latLng?.lat();
         const lng = event.latLng?.lng();
         if (lat && lng) {
@@ -164,7 +165,7 @@ export default function BranchesPage() {
         }
       });
 
-      mapInstance.addListener('click', (event: google.maps.MapMouseEvent) => {
+      mapInstance.addListener('click', (event: any) => {
         const lat = event.latLng?.lat();
         const lng = event.latLng?.lng();
         if (lat && lng) {
@@ -188,13 +189,10 @@ export default function BranchesPage() {
       address: '',
       city: '',
       province: '',
-      postalCode: '',
-      phone: '',
-      email: '',
+      phone_number: '',
+      whatsapp_number: '',
       latitude: 0,
       longitude: 0,
-      status: 'active',
-      manager: '',
     });
     setEditingItem(null);
     setIsDialogOpen(true);
@@ -206,28 +204,42 @@ export default function BranchesPage() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (item: Branch) => {
+  const handleDelete = async (item: Branch) => {
     if (window.confirm(`Are you sure you want to delete ${item.name}?`)) {
-      setData(data.filter(d => d.id !== item.id));
+      try {
+        await branchesAPI.delete(item.documentId);
+        setData(data.filter(d => d.id !== item.id));
+        toast.success('Branch deleted successfully');
+      } catch (error) {
+        console.error('Failed to delete branch:', error);
+        toast.error('Failed to delete branch');
+      }
     }
   };
 
-  const handleSave = () => {
-    if (editingItem) {
-      setData(data.map(item =>
-        item.id === editingItem.id
-          ? { ...item, ...formData, id: item.id }
-          : item
-      ));
-    } else {
-      const newItem: Branch = {
-        ...formData as Branch,
-        id: Date.now().toString(),
-      };
-      setData([...data, newItem]);
+  const handleSave = async () => {
+    try {
+      if (editingItem) {
+        // Edit existing item
+        const response = await branchesAPI.update(editingItem.documentId, formData);
+        setData(data.map(item =>
+          item.id === editingItem.id
+            ? { ...item, ...response.data }
+            : item
+        ));
+        toast.success('Branch updated successfully');
+      } else {
+        // Add new item
+        const response = await branchesAPI.create(formData);
+        setData([...data, response.data]);
+        toast.success('Branch created successfully');
+      }
+      setIsDialogOpen(false);
+      setEditingItem(null);
+    } catch (error) {
+      console.error('Failed to save branch:', error);
+      toast.error('Failed to save branch');
     }
-    setIsDialogOpen(false);
-    setEditingItem(null);
   };
 
   const loadGoogleMaps = (callback: () => void) => {
@@ -298,25 +310,14 @@ export default function BranchesPage() {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Branch Name</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="e.g., Jakarta Branch"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="manager">Manager Name</Label>
-                    <Input
-                      id="manager"
-                      value={formData.manager}
-                      onChange={(e) => setFormData({ ...formData, manager: e.target.value })}
-                      placeholder="e.g., Budi Santoso"
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="name">Branch Name</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="e.g., KARUNIA SURABAYA"
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -329,54 +330,44 @@ export default function BranchesPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="city">City</Label>
                     <Input
                       id="city"
-                      value={formData.city}
+                      value={formData.city || ''}
                       onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                      placeholder="e.g., Jakarta"
+                      placeholder="e.g., Surabaya"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="province">Province</Label>
                     <Input
                       id="province"
-                      value={formData.province}
+                      value={formData.province || ''}
                       onChange={(e) => setFormData({ ...formData, province: e.target.value })}
-                      placeholder="e.g., DKI Jakarta"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="postalCode">Postal Code</Label>
-                    <Input
-                      id="postalCode"
-                      value={formData.postalCode}
-                      onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
-                      placeholder="e.g., 10350"
+                      placeholder="e.g., Jawa Timur"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Phone</Label>
+                    <Label htmlFor="phone_number">Phone Number</Label>
                     <Input
-                      id="phone"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      id="phone_number"
+                      value={formData.phone_number || ''}
+                      onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
                       placeholder="e.g., (021) 8901234"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="whatsapp_number">WhatsApp Number</Label>
                     <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="branch@example.com"
+                      id="whatsapp_number"
+                      value={formData.whatsapp_number || ''}
+                      onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })}
+                      placeholder="e.g., 0812-3456-7890"
                     />
                   </div>
                 </div>
