@@ -18,10 +18,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CRUDTable } from '@/components/CRUDTable';
 import DashboardLayout from '@/components/DashboardLayout';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import { vehicleTypesAPI } from '@/services/api';
+import { vehicleGroupsAPI, categoriesAPI } from '@/services/api';
 import { toast } from 'sonner';
 
-interface VehicleType {
+interface VehicleGroup {
   id: number;
   documentId: string;
   name: string;
@@ -30,51 +30,73 @@ interface VehicleType {
   publishedAt: string;
 }
 
+interface Category {
+  id: number;
+  documentId: string;
+  name: string;
+  slug: string | null;
+  description: string | null;
+  createdAt: string;
+  updatedAt: string;
+  publishedAt: string;
+}
 
-const brands = ['Honda', 'Yamaha', 'Suzuki', 'Kawasaki'];
-const categories = ['Matic', 'Sport', 'Bebek', 'Naked'];
-
-export default function VehicleTypesPage() {
-  const [data, setData] = useState<VehicleType[]>([]);
+export default function VehicleGroupsPage() {
+  const [data, setData] = useState<VehicleGroup[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<VehicleType | null>(null);
-  const [formData, setFormData] = useState<Partial<VehicleType>>({
+  const [editingItem, setEditingItem] = useState<VehicleGroup | null>(null);
+  const [formData, setFormData] = useState<Partial<VehicleGroup>>({
     name: '',
   });
 
   // Fetch data from API
   const fetchData = async () => {
-    console.log('🚀 [VehicleTypes] fetchData started');
+    console.log('🚀 [VehicleGroups] fetchData started');
     try {
       setLoading(true);
-      console.log('📡 [VehicleTypes] Making API call to vehicle-types...');
+      console.log('📡 [VehicleGroups] Making parallel API calls...');
 
-      const response = await vehicleTypesAPI.find();
+      const [vehicleGroupsResponse, categoriesResponse] = await Promise.all([
+        vehicleGroupsAPI.find(),
+        categoriesAPI.find()
+      ]);
 
-      console.log('📊 [VehicleTypes] API Response received:', {
-        hasData: !!response?.data,
-        dataCount: response?.data?.length || 0,
-        keys: response ? Object.keys(response) : 'null'
+      console.log('📊 [VehicleGroups] API Responses received:', {
+        vehicleGroups: {
+          hasData: !!vehicleGroupsResponse?.data,
+          dataCount: vehicleGroupsResponse?.data?.length || 0,
+          keys: vehicleGroupsResponse ? Object.keys(vehicleGroupsResponse) : 'null'
+        },
+        categories: {
+          hasData: !!categoriesResponse?.data,
+          dataCount: categoriesResponse?.data?.length || 0,
+          keys: categoriesResponse ? Object.keys(categoriesResponse) : 'null'
+        }
       });
 
-      const vehicleTypesData = response.data || [];
+      const vehicleGroupsData = vehicleGroupsResponse.data || [];
+      const categoriesData = categoriesResponse.data || [];
 
-      console.log('📋 [VehicleTypes] Setting state:', {
-        vehicleTypesCount: vehicleTypesData.length,
-        vehicleTypesSample: vehicleTypesData.slice(0, 2)
+      console.log('📋 [VehicleGroups] Setting state:', {
+        vehicleGroupsCount: vehicleGroupsData.length,
+        categoriesCount: categoriesData.length,
+        vehicleGroupsSample: vehicleGroupsData.slice(0, 2),
+        categoriesSample: categoriesData.slice(0, 2)
       });
 
-      setData(vehicleTypesData);
+      setData(vehicleGroupsData);
+      setCategories(categoriesData);
 
-      console.log('✅ [VehicleTypes] fetchData completed successfully');
+      console.log('✅ [VehicleGroups] fetchData completed successfully');
     } catch (error) {
-      console.error('❌ [VehicleTypes] fetchData failed:', error);
-      toast.error('Failed to load vehicle types');
+      console.error('❌ [VehicleGroups] fetchData failed:', error);
+      toast.error('Failed to load vehicle groups');
     } finally {
       setLoading(false);
-      console.log('⏳ [VehicleTypes] setLoading(false) - loading complete');
+      console.log('⏳ [VehicleGroups] setLoading(false) - loading complete');
     }
   };
 
@@ -82,7 +104,7 @@ export default function VehicleTypesPage() {
     fetchData();
   }, []);
 
-  const columns: ColumnDef<VehicleType>[] = [
+  const columns: ColumnDef<VehicleGroup>[] = [
     {
       accessorKey: 'id',
       header: 'ID',
@@ -92,7 +114,7 @@ export default function VehicleTypesPage() {
     },
     {
       accessorKey: 'name',
-      header: 'Vehicle Type',
+      header: 'Vehicle Group',
       cell: ({ row }) => (
         <div className="font-medium">{row.getValue('name')}</div>
       ),
@@ -114,21 +136,21 @@ export default function VehicleTypesPage() {
     setIsAddDialogOpen(true);
   };
 
-  const handleEdit = (item: VehicleType) => {
+  const handleEdit = (item: VehicleGroup) => {
     setEditingItem(item);
     setFormData(item);
     setIsEditDialogOpen(true);
   };
 
-  const handleDelete = async (item: VehicleType) => {
-    if (window.confirm(`Are you sure you want to delete ${item.name}?`)) {
+  const handleDelete = async (item: VehicleGroup) => {
+    if (window.confirm(`Are you sure you want to delete ${item.name} group?`)) {
       try {
-        await vehicleTypesAPI.delete(item.documentId);
+        await vehicleGroupsAPI.delete(item.documentId);
         setData(data.filter(d => d.id !== item.id));
-        toast.success('Vehicle type deleted successfully');
+        toast.success('Vehicle group deleted successfully');
       } catch (error) {
-        console.error('Failed to delete vehicle type:', error);
-        toast.error('Failed to delete vehicle type');
+        console.error('Failed to delete vehicle group:', error);
+        toast.error('Failed to delete vehicle group');
       }
     }
   };
@@ -137,25 +159,25 @@ export default function VehicleTypesPage() {
     try {
       if (editingItem) {
         // Edit existing item
-        const response = await vehicleTypesAPI.update(editingItem.documentId, formData);
+        const response = await vehicleGroupsAPI.update(editingItem.documentId, formData);
         setData(data.map(item =>
           item.id === editingItem.id
             ? { ...item, ...response.data }
             : item
         ));
         setIsEditDialogOpen(false);
-        toast.success('Vehicle type updated successfully');
+        toast.success('Vehicle group updated successfully');
       } else {
         // Add new item
-        const response = await vehicleTypesAPI.create(formData);
+        const response = await vehicleGroupsAPI.create(formData);
         setData([...data, response.data]);
         setIsAddDialogOpen(false);
-        toast.success('Vehicle type created successfully');
+        toast.success('Vehicle group created successfully');
       }
       setEditingItem(null);
     } catch (error) {
-      console.error('Failed to save vehicle type:', error);
-      toast.error('Failed to save vehicle type');
+      console.error('Failed to save vehicle group:', error);
+      toast.error('Failed to save vehicle group');
     }
   };
 
@@ -166,13 +188,13 @@ export default function VehicleTypesPage() {
           <CRUDTable
             data={data}
             columns={columns}
-            title="Vehicle Types"
-            description="Manage all vehicle types and models"
+            title="Vehicle Groups"
+            description="Manage vehicle categories and groups"
             onAdd={handleAdd}
             onEdit={handleEdit}
             onDelete={handleDelete}
-            searchPlaceholder="Search vehicle types..."
-            addButtonText="Add Vehicle Type"
+            searchPlaceholder="Search vehicle groups..."
+            addButtonText="Add Vehicle Group"
           />
 
           {/* Add/Edit Dialog */}
@@ -189,23 +211,23 @@ export default function VehicleTypesPage() {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>
-                  {editingItem ? 'Edit Vehicle Type' : 'Add New Vehicle Type'}
+                  {editingItem ? 'Edit Vehicle Group' : 'Add New Vehicle Group'}
                 </DialogTitle>
                 <DialogDescription>
                   {editingItem
-                    ? 'Update the vehicle type information below.'
-                    : 'Fill in the details for the new vehicle type.'
+                    ? 'Update the vehicle group information below.'
+                    : 'Fill in the details for the new vehicle group.'
                   }
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Vehicle Type Name</Label>
+                  <Label htmlFor="name">Vehicle Group Name</Label>
                   <Input
                     id="name"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="e.g., TERIOS R AT"
+                    placeholder="e.g., ALL NEW XENIA"
                   />
                 </div>
 

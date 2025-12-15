@@ -10,71 +10,58 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CRUDTable } from '@/components/CRUDTable';
 import DashboardLayout from '@/components/DashboardLayout';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import { vehicleTypesAPI } from '@/services/api';
+import { colorsAPI } from '@/services/api';
 import { toast } from 'sonner';
 
-interface VehicleType {
+interface Color {
   id: number;
   documentId: string;
-  name: string;
+  colorname: string;
   createdAt: string;
   updatedAt: string;
   publishedAt: string;
 }
 
-
-const brands = ['Honda', 'Yamaha', 'Suzuki', 'Kawasaki'];
-const categories = ['Matic', 'Sport', 'Bebek', 'Naked'];
-
-export default function VehicleTypesPage() {
-  const [data, setData] = useState<VehicleType[]>([]);
+export default function ColorsPage() {
+  const [data, setData] = useState<Color[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<VehicleType | null>(null);
-  const [formData, setFormData] = useState<Partial<VehicleType>>({
-    name: '',
+  const [editingItem, setEditingItem] = useState<Color | null>(null);
+  const [formData, setFormData] = useState<Partial<Color>>({
+    colorname: '',
   });
 
-  // Fetch data from API
   const fetchData = async () => {
-    console.log('🚀 [VehicleTypes] fetchData started');
+    console.log('🚀 [Colors] fetchData started');
     try {
       setLoading(true);
-      console.log('📡 [VehicleTypes] Making API call to vehicle-types...');
-
-      const response = await vehicleTypesAPI.find();
-
-      console.log('📊 [VehicleTypes] API Response received:', {
+      console.log('📡 [Colors] Making API call to colors...');
+      const response = await colorsAPI.find();
+      console.log('📊 [Colors] API Response received:', {
         hasData: !!response?.data,
         dataCount: response?.data?.length || 0,
         keys: response ? Object.keys(response) : 'null'
       });
-
-      const vehicleTypesData = response.data || [];
-
-      console.log('📋 [VehicleTypes] Setting state:', {
-        vehicleTypesCount: vehicleTypesData.length,
-        vehicleTypesSample: vehicleTypesData.slice(0, 2)
+      const colorsData = response.data || [];
+      console.log('📋 [Colors] Setting state:', {
+        colorsCount: colorsData.length,
+        colorsSample: colorsData.slice(0, 2)
       });
-
-      setData(vehicleTypesData);
-
-      console.log('✅ [VehicleTypes] fetchData completed successfully');
+      setData(colorsData);
+      console.log('✅ [Colors] fetchData completed successfully');
     } catch (error) {
-      console.error('❌ [VehicleTypes] fetchData failed:', error);
-      toast.error('Failed to load vehicle types');
+      console.error('❌ [Colors] fetchData failed:', error);
+      toast.error('Failed to load colors');
     } finally {
       setLoading(false);
-      console.log('⏳ [VehicleTypes] setLoading(false) - loading complete');
+      console.log('⏳ [Colors] setLoading(false) - loading complete');
     }
   };
 
@@ -82,7 +69,7 @@ export default function VehicleTypesPage() {
     fetchData();
   }, []);
 
-  const columns: ColumnDef<VehicleType>[] = [
+  const columns: ColumnDef<Color>[] = [
     {
       accessorKey: 'id',
       header: 'ID',
@@ -91,10 +78,10 @@ export default function VehicleTypesPage() {
       ),
     },
     {
-      accessorKey: 'name',
-      header: 'Vehicle Type',
+      accessorKey: 'colorname',
+      header: 'Color Name',
       cell: ({ row }) => (
-        <div className="font-medium">{row.getValue('name')}</div>
+        <div className="font-medium">{row.getValue('colorname')}</div>
       ),
     },
     {
@@ -108,54 +95,56 @@ export default function VehicleTypesPage() {
   ];
 
   const handleAdd = () => {
+    console.log('➕ [Colors] handleAdd called');
     setFormData({
-      name: '',
+      colorname: '',
     });
     setIsAddDialogOpen(true);
   };
 
-  const handleEdit = (item: VehicleType) => {
+  const handleEdit = (item: Color) => {
+    console.log('✏️ [Colors] handleEdit called with item:', item);
     setEditingItem(item);
     setFormData(item);
     setIsEditDialogOpen(true);
   };
 
-  const handleDelete = async (item: VehicleType) => {
-    if (window.confirm(`Are you sure you want to delete ${item.name}?`)) {
+  const handleDelete = async (item: Color) => {
+    console.log('🗑️ [Colors] handleDelete called with item:', item);
+    if (window.confirm(`Are you sure you want to delete ${item.colorname}?`)) {
       try {
-        await vehicleTypesAPI.delete(item.documentId);
+        await colorsAPI.delete(item.documentId);
         setData(data.filter(d => d.id !== item.id));
-        toast.success('Vehicle type deleted successfully');
+        toast.success('Color deleted successfully');
       } catch (error) {
-        console.error('Failed to delete vehicle type:', error);
-        toast.error('Failed to delete vehicle type');
+        console.error('Failed to delete color:', error);
+        toast.error('Failed to delete color');
       }
     }
   };
 
   const handleSave = async () => {
+    console.log('💾 [Colors] handleSave called with formData:', formData);
     try {
       if (editingItem) {
-        // Edit existing item
-        const response = await vehicleTypesAPI.update(editingItem.documentId, formData);
+        const response = await colorsAPI.update(editingItem.documentId, formData);
         setData(data.map(item =>
           item.id === editingItem.id
             ? { ...item, ...response.data }
             : item
         ));
         setIsEditDialogOpen(false);
-        toast.success('Vehicle type updated successfully');
+        toast.success('Color updated successfully');
       } else {
-        // Add new item
-        const response = await vehicleTypesAPI.create(formData);
+        const response = await colorsAPI.create(formData);
         setData([...data, response.data]);
         setIsAddDialogOpen(false);
-        toast.success('Vehicle type created successfully');
+        toast.success('Color created successfully');
       }
       setEditingItem(null);
     } catch (error) {
-      console.error('Failed to save vehicle type:', error);
-      toast.error('Failed to save vehicle type');
+      console.error('Failed to save color:', error);
+      toast.error('Failed to save color');
     }
   };
 
@@ -166,16 +155,15 @@ export default function VehicleTypesPage() {
           <CRUDTable
             data={data}
             columns={columns}
-            title="Vehicle Types"
-            description="Manage all vehicle types and models"
+            title="Colors"
+            description="Manage available vehicle colors"
             onAdd={handleAdd}
             onEdit={handleEdit}
             onDelete={handleDelete}
-            searchPlaceholder="Search vehicle types..."
-            addButtonText="Add Vehicle Type"
+            searchPlaceholder="Search colors..."
+            addButtonText="Add Color"
           />
 
-          {/* Add/Edit Dialog */}
           <Dialog
             open={isAddDialogOpen || isEditDialogOpen}
             onOpenChange={(open) => {
@@ -189,23 +177,23 @@ export default function VehicleTypesPage() {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>
-                  {editingItem ? 'Edit Vehicle Type' : 'Add New Vehicle Type'}
+                  {editingItem ? 'Edit Color' : 'Add New Color'}
                 </DialogTitle>
                 <DialogDescription>
                   {editingItem
-                    ? 'Update the vehicle type information below.'
-                    : 'Fill in the details for the new vehicle type.'
+                    ? 'Update the color information below.'
+                    : 'Fill in the details for the new color.'
                   }
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Vehicle Type Name</Label>
+                  <Label htmlFor="colorname">Color Name</Label>
                   <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="e.g., TERIOS R AT"
+                    id="colorname"
+                    value={formData.colorname || ''}
+                    onChange={(e) => setFormData({ ...formData, colorname: e.target.value })}
+                    placeholder="e.g., HIJAU METALIK"
                   />
                 </div>
 
