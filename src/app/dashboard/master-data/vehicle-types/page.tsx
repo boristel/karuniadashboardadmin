@@ -10,16 +10,15 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CRUDTable } from '@/components/CRUDTable';
 import DashboardLayout from '@/components/DashboardLayout';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import { vehicleTypesAPI } from '@/services/api';
+import { vehicleTypesAPI, vehicleGroupsAPI } from '@/services/api';
 import { toast } from 'sonner';
+import { Combobox } from '@/components/ui/combobox';
 
 interface VehicleType {
   id: number;
@@ -28,53 +27,41 @@ interface VehicleType {
   createdAt: string;
   updatedAt: string;
   publishedAt: string;
+  vehicle_group: string | null | { documentId: string; name: string };
 }
 
-
-const brands = ['Honda', 'Yamaha', 'Suzuki', 'Kawasaki'];
-const categories = ['Matic', 'Sport', 'Bebek', 'Naked'];
+interface VehicleGroupData {
+  id: number;
+  documentId: string;
+  name: string;
+}
 
 export default function VehicleTypesPage() {
   const [data, setData] = useState<VehicleType[]>([]);
+  const [vehicleGroups, setVehicleGroups] = useState<VehicleGroupData[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<VehicleType | null>(null);
   const [formData, setFormData] = useState<Partial<VehicleType>>({
     name: '',
+    vehicle_group: null,
   });
 
-  // Fetch data from API
   const fetchData = async () => {
-    console.log('🚀 [VehicleTypes] fetchData started');
     try {
       setLoading(true);
-      console.log('📡 [VehicleTypes] Making API call to vehicle-types...');
-
-      const response = await vehicleTypesAPI.find();
-
-      console.log('📊 [VehicleTypes] API Response received:', {
-        hasData: !!response?.data,
-        dataCount: response?.data?.length || 0,
-        keys: response ? Object.keys(response) : 'null'
-      });
-
-      const vehicleTypesData = response.data || [];
-
-      console.log('📋 [VehicleTypes] Setting state:', {
-        vehicleTypesCount: vehicleTypesData.length,
-        vehicleTypesSample: vehicleTypesData.slice(0, 2)
-      });
-
-      setData(vehicleTypesData);
-
-      console.log('✅ [VehicleTypes] fetchData completed successfully');
+      const [vehicleTypesResponse, vehicleGroupsResponse] = await Promise.all([
+        vehicleTypesAPI.find(),
+        vehicleGroupsAPI.find(),
+      ]);
+      setData(vehicleTypesResponse.data || []);
+      setVehicleGroups(vehicleGroupsResponse.data || []);
     } catch (error) {
-      console.error('❌ [VehicleTypes] fetchData failed:', error);
-      toast.error('Failed to load vehicle types');
+      console.error('Failed to fetch data:', error);
+      toast.error('Failed to load data');
     } finally {
       setLoading(false);
-      console.log('⏳ [VehicleTypes] setLoading(false) - loading complete');
     }
   };
 
@@ -86,23 +73,39 @@ export default function VehicleTypesPage() {
     {
       accessorKey: 'id',
       header: 'ID',
-      cell: ({ row }) => (
-        <Badge variant="outline">{row.getValue('id')}</Badge>
-      ),
+      cell: ({ row }) => <Badge variant="outline">{row.original.id}</Badge>,
     },
     {
       accessorKey: 'name',
       header: 'Vehicle Type',
       cell: ({ row }) => (
-        <div className="font-medium">{row.getValue('name')}</div>
+        <div className="font-medium">{row.original.name}</div>
       ),
+    },
+    {
+      accessorKey: 'vehicle_group',
+      header: 'Vehicle Group',
+      cell: ({ row }) => {
+        const group = row.original.vehicle_group;
+        const displayValue = typeof group === 'object' && group !== null
+          ? group.name
+          : group;
+
+        return (
+          <div className="font-medium">{displayValue || '-'}</div>
+        );
+      },
     },
     {
       accessorKey: 'createdAt',
       header: 'Created',
       cell: ({ row }) => {
-        const date = new Date(row.getValue('createdAt'));
-        return <div className="text-sm text-gray-600">{date.toLocaleDateString()}</div>;
+        const date = new Date(row.original.createdAt);
+        return (
+          <div className="text-sm text-gray-600">
+            {date.toLocaleDateString()}
+          </div>
+        );
       },
     },
   ];
@@ -110,13 +113,22 @@ export default function VehicleTypesPage() {
   const handleAdd = () => {
     setFormData({
       name: '',
+      vehicle_group: null,
     });
     setIsAddDialogOpen(true);
   };
 
   const handleEdit = (item: VehicleType) => {
     setEditingItem(item);
-    setFormData(item);
+    // Handle vehicle_group which might be an object or string
+    const vehicleGroupValue = typeof item.vehicle_group === 'object' && item.vehicle_group !== null
+      ? item.vehicle_group.name
+      : item.vehicle_group;
+
+    setFormData({
+      ...item,
+      vehicle_group: vehicleGroupValue
+    });
     setIsEditDialogOpen(true);
   };
 
@@ -124,8 +136,8 @@ export default function VehicleTypesPage() {
     if (window.confirm(`Are you sure you want to delete ${item.name}?`)) {
       try {
         await vehicleTypesAPI.delete(item.documentId);
-        setData(data.filter(d => d.id !== item.id));
         toast.success('Vehicle type deleted successfully');
+        fetchData();
       } catch (error) {
         console.error('Failed to delete vehicle type:', error);
         toast.error('Failed to delete vehicle type');
@@ -135,29 +147,35 @@ export default function VehicleTypesPage() {
 
   const handleSave = async () => {
     try {
+      const dataToSave = {
+        name: formData.name,
+        vehicle_group: formData.vehicle_group,
+      };
+
       if (editingItem) {
-        // Edit existing item
-        const response = await vehicleTypesAPI.update(editingItem.documentId, formData);
-        setData(data.map(item =>
-          item.id === editingItem.id
-            ? { ...item, ...response.data }
-            : item
-        ));
-        setIsEditDialogOpen(false);
+        await vehicleTypesAPI.update(
+          editingItem.documentId,
+          dataToSave
+        );
         toast.success('Vehicle type updated successfully');
       } else {
-        // Add new item
-        const response = await vehicleTypesAPI.create(formData);
-        setData([...data, response.data]);
-        setIsAddDialogOpen(false);
+        await vehicleTypesAPI.create(dataToSave);
         toast.success('Vehicle type created successfully');
       }
+      setIsEditDialogOpen(false);
+      setIsAddDialogOpen(false);
       setEditingItem(null);
+      fetchData();
     } catch (error) {
       console.error('Failed to save vehicle type:', error);
       toast.error('Failed to save vehicle type');
     }
   };
+
+  const vehicleGroupOptions = vehicleGroups.map((group) => ({
+    label: group.name,
+    value: group.name,
+  }));
 
   return (
     <ProtectedRoute>
@@ -175,7 +193,6 @@ export default function VehicleTypesPage() {
             addButtonText="Add Vehicle Type"
           />
 
-          {/* Add/Edit Dialog */}
           <Dialog
             open={isAddDialogOpen || isEditDialogOpen}
             onOpenChange={(open) => {
@@ -194,8 +211,7 @@ export default function VehicleTypesPage() {
                 <DialogDescription>
                   {editingItem
                     ? 'Update the vehicle type information below.'
-                    : 'Fill in the details for the new vehicle type.'
-                  }
+                    : 'Fill in the details for the new vehicle type.'}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
@@ -203,9 +219,31 @@ export default function VehicleTypesPage() {
                   <Label htmlFor="name">Vehicle Type Name</Label>
                   <Input
                     id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    value={formData.name || ''}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
                     placeholder="e.g., TERIOS R AT"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="vehicle_group">Vehicle Group</Label>
+                  <Combobox
+                    options={vehicleGroupOptions}
+                    value={typeof formData.vehicle_group === 'string' ? formData.vehicle_group : ''}
+                    onChange={(value) => {
+                      console.log('VehicleTypes onChange - selected value:', value);
+                      console.log('Before update - formData:', formData);
+                      setFormData(prev => {
+                        const newFormData = { ...prev, vehicle_group: value };
+                        console.log('After update - newFormData:', newFormData);
+                        return newFormData;
+                      });
+                    }}
+                    placeholder="Select vehicle group..."
+                    searchPlaceholder="Search groups..."
+                    noResultsMessage="No groups found."
                   />
                 </div>
 

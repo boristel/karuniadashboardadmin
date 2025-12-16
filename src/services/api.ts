@@ -285,7 +285,7 @@ export const createCRUDAPI = (endpoint: string) => ({
         status: response.status,
         hasData: !!response.data?.data
       });
-      return response.data; // Returns { data: {...} }
+      return response.data;
     } catch (error: any) {
       console.error(`❌ [CRUD] ${endpoint}.create ERROR:`, {
         message: error.message,
@@ -305,7 +305,7 @@ export const createCRUDAPI = (endpoint: string) => ({
         status: response.status,
         hasData: !!response.data?.data
       });
-      return response.data; // Returns { data: {...} }
+      return response.data;
     } catch (error: any) {
       console.error(`❌ [CRUD] ${endpoint}.update ERROR:`, {
         message: error.message,
@@ -374,6 +374,9 @@ export const colorsAPI = createCRUDAPI('colors');
 export const supervisorsAPI = createCRUDAPI('supervisors');
 export const branchesAPI = createCRUDAPI('branches');
 export const salesStaffAPI = createCRUDAPI('sales-staffs');
+
+// Sales Profile API
+export const salesProfilesAPI = createCRUDAPI('sales-profiles');
 
 // User management API
 export const usersAPI = {

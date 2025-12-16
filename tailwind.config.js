@@ -1,6 +1,9 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
     darkMode: ['class'],
+    corePlugins: {
+        preflight: false, // Disable Tailwind's preflight to use MUI's CssBaseline
+    },
     content: [
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',

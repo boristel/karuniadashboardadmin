@@ -79,15 +79,13 @@ export default function BranchesPage() {
     {
       accessorKey: 'id',
       header: 'ID',
-      cell: ({ row }) => (
-        <Badge variant="outline">{row.getValue('id')}</Badge>
-      ),
+      cell: ({ row }) => <Badge variant="outline">{row.original.id}</Badge>,
     },
     {
       accessorKey: 'name',
       header: 'Branch Name',
       cell: ({ row }) => (
-        <div className="font-medium">{row.getValue('name')}</div>
+        <div className="font-medium">{row.original.name}</div>
       ),
     },
     {
@@ -95,7 +93,7 @@ export default function BranchesPage() {
       header: 'Address',
       cell: ({ row }) => (
         <div className="text-sm text-gray-600 max-w-xs truncate">
-          {row.getValue('address')}
+          {row.original.address}
         </div>
       ),
     },
@@ -103,22 +101,26 @@ export default function BranchesPage() {
       accessorKey: 'city',
       header: 'City',
       cell: ({ row }) => (
-        <div className="text-sm">{row.getValue('city') || '-'}</div>
+        <div className="text-sm">{row.original.city || '-'}</div>
       ),
     },
     {
       accessorKey: 'phone_number',
       header: 'Phone',
       cell: ({ row }) => (
-        <div className="text-sm">{row.getValue('phone_number') || '-'}</div>
+        <div className="text-sm">{row.original.phone_number || '-'}</div>
       ),
     },
     {
       accessorKey: 'createdAt',
       header: 'Created',
       cell: ({ row }) => {
-        const date = new Date(row.getValue('createdAt'));
-        return <div className="text-sm text-gray-600">{date.toLocaleDateString()}</div>;
+        const date = new Date(row.original.createdAt);
+        return (
+          <div className="text-sm text-gray-600">
+            {date.toLocaleDateString()}
+          </div>
+        );
       },
     },
   ];
@@ -137,18 +139,20 @@ export default function BranchesPage() {
       const defaultLocation = { lat: -6.1944, lng: 106.8229 };
       const mapInstance = new window.google.maps.Map(mapRef.current!, {
         zoom: 15,
-        center: formData.latitude && formData.longitude
-          ? { lat: formData.latitude, lng: formData.longitude }
-          : defaultLocation,
+        center:
+          formData.latitude && formData.longitude
+            ? { lat: formData.latitude, lng: formData.longitude }
+            : defaultLocation,
         mapTypeControl: true,
         streetViewControl: true,
         fullscreenControl: true,
       });
 
       const mapMarker = new window.google.maps.Marker({
-        position: formData.latitude && formData.longitude
-          ? { lat: formData.latitude, lng: formData.longitude }
-          : defaultLocation,
+        position:
+          formData.latitude && formData.longitude
+            ? { lat: formData.latitude, lng: formData.longitude }
+            : defaultLocation,
         map: mapInstance,
         draggable: true,
       });
@@ -157,7 +161,7 @@ export default function BranchesPage() {
         const lat = event.latLng?.lat();
         const lng = event.latLng?.lng();
         if (lat && lng) {
-          setFormData(prev => ({
+          setFormData((prev) => ({
             ...prev,
             latitude: lat,
             longitude: lng,
@@ -169,7 +173,7 @@ export default function BranchesPage() {
         const lat = event.latLng?.lat();
         const lng = event.latLng?.lng();
         if (lat && lng) {
-          setFormData(prev => ({
+          setFormData((prev) => ({
             ...prev,
             latitude: lat,
             longitude: lng,
@@ -208,8 +212,8 @@ export default function BranchesPage() {
     if (window.confirm(`Are you sure you want to delete ${item.name}?`)) {
       try {
         await branchesAPI.delete(item.documentId);
-        setData(data.filter(d => d.id !== item.id));
         toast.success('Branch deleted successfully');
+        fetchData(); // Refetch data
       } catch (error) {
         console.error('Failed to delete branch:', error);
         toast.error('Failed to delete branch');
@@ -221,21 +225,29 @@ export default function BranchesPage() {
     try {
       if (editingItem) {
         // Edit existing item
-        const response = await branchesAPI.update(editingItem.documentId, formData);
-        setData(data.map(item =>
-          item.id === editingItem.id
-            ? { ...item, ...response.data }
-            : item
-        ));
+        const dataToUpdate = {
+          name: formData.name,
+          address: formData.address,
+          city: formData.city,
+          province: formData.province,
+          phone_number: formData.phone_number,
+          whatsapp_number: formData.whatsapp_number,
+          latitude: formData.latitude,
+          longitude: formData.longitude,
+        };
+        await branchesAPI.update(
+          editingItem.documentId,
+          dataToUpdate
+        );
         toast.success('Branch updated successfully');
       } else {
         // Add new item
-        const response = await branchesAPI.create(formData);
-        setData([...data, response.data]);
+        await branchesAPI.create(formData);
         toast.success('Branch created successfully');
       }
       setIsDialogOpen(false);
       setEditingItem(null);
+      fetchData(); // Refetch data
     } catch (error) {
       console.error('Failed to save branch:', error);
       toast.error('Failed to save branch');
@@ -315,7 +327,9 @@ export default function BranchesPage() {
                   <Input
                     id="name"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
                     placeholder="e.g., KARUNIA SURABAYA"
                   />
                 </div>
@@ -325,7 +339,9 @@ export default function BranchesPage() {
                   <Textarea
                     id="address"
                     value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, address: e.target.value })
+                    }
                     placeholder="Enter full address"
                   />
                 </div>
@@ -336,7 +352,9 @@ export default function BranchesPage() {
                     <Input
                       id="city"
                       value={formData.city || ''}
-                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, city: e.target.value })
+                      }
                       placeholder="e.g., Surabaya"
                     />
                   </div>
@@ -345,7 +363,9 @@ export default function BranchesPage() {
                     <Input
                       id="province"
                       value={formData.province || ''}
-                      onChange={(e) => setFormData({ ...formData, province: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, province: e.target.value })
+                      }
                       placeholder="e.g., Jawa Timur"
                     />
                   </div>
@@ -357,7 +377,12 @@ export default function BranchesPage() {
                     <Input
                       id="phone_number"
                       value={formData.phone_number || ''}
-                      onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          phone_number: e.target.value,
+                        })
+                      }
                       placeholder="e.g., (021) 8901234"
                     />
                   </div>
@@ -366,7 +391,12 @@ export default function BranchesPage() {
                     <Input
                       id="whatsapp_number"
                       value={formData.whatsapp_number || ''}
-                      onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          whatsapp_number: e.target.value,
+                        })
+                      }
                       placeholder="e.g., 0812-3456-7890"
                     />
                   </div>
@@ -379,7 +409,12 @@ export default function BranchesPage() {
                       type="number"
                       step="any"
                       value={formData.latitude || ''}
-                      onChange={(e) => setFormData({ ...formData, latitude: parseFloat(e.target.value) || 0 })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          latitude: parseFloat(e.target.value) || 0,
+                        })
+                      }
                       placeholder="e.g., -6.1944"
                     />
                   </div>
@@ -389,8 +424,13 @@ export default function BranchesPage() {
                       type="number"
                       step="any"
                       value={formData.longitude || ''}
-                      onChange={(e) => setFormData({ ...formData, longitude: parseFloat(e.target.value) || 0 })}
-                      placeholder="e.g., 106.8229"
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          longitude: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                      placeholder="e.g., 106.822.9"
                     />
                   </div>
                 </div>

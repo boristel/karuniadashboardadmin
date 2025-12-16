@@ -47,12 +47,12 @@ export default function ColorsPage() {
       console.log('📊 [Colors] API Response received:', {
         hasData: !!response?.data,
         dataCount: response?.data?.length || 0,
-        keys: response ? Object.keys(response) : 'null'
+        keys: response ? Object.keys(response) : 'null',
       });
       const colorsData = response.data || [];
       console.log('📋 [Colors] Setting state:', {
         colorsCount: colorsData.length,
-        colorsSample: colorsData.slice(0, 2)
+        colorsSample: colorsData.slice(0, 2),
       });
       setData(colorsData);
       console.log('✅ [Colors] fetchData completed successfully');
@@ -73,23 +73,25 @@ export default function ColorsPage() {
     {
       accessorKey: 'id',
       header: 'ID',
-      cell: ({ row }) => (
-        <Badge variant="outline">{row.getValue('id')}</Badge>
-      ),
+      cell: ({ row }) => <Badge variant="outline">{row.original.id}</Badge>,
     },
     {
       accessorKey: 'colorname',
       header: 'Color Name',
       cell: ({ row }) => (
-        <div className="font-medium">{row.getValue('colorname')}</div>
+        <div className="font-medium">{row.original.colorname}</div>
       ),
     },
     {
       accessorKey: 'createdAt',
       header: 'Created',
       cell: ({ row }) => {
-        const date = new Date(row.getValue('createdAt'));
-        return <div className="text-sm text-gray-600">{date.toLocaleDateString()}</div>;
+        const date = new Date(row.original.createdAt);
+        return (
+          <div className="text-sm text-gray-600">
+            {date.toLocaleDateString()}
+          </div>
+        );
       },
     },
   ];
@@ -114,8 +116,8 @@ export default function ColorsPage() {
     if (window.confirm(`Are you sure you want to delete ${item.colorname}?`)) {
       try {
         await colorsAPI.delete(item.documentId);
-        setData(data.filter(d => d.id !== item.id));
         toast.success('Color deleted successfully');
+        fetchData(); // Refetch data
       } catch (error) {
         console.error('Failed to delete color:', error);
         toast.error('Failed to delete color');
@@ -127,21 +129,22 @@ export default function ColorsPage() {
     console.log('💾 [Colors] handleSave called with formData:', formData);
     try {
       if (editingItem) {
-        const response = await colorsAPI.update(editingItem.documentId, formData);
-        setData(data.map(item =>
-          item.id === editingItem.id
-            ? { ...item, ...response.data }
-            : item
-        ));
-        setIsEditDialogOpen(false);
+        const dataToUpdate = {
+          colorname: formData.colorname,
+        };
+        await colorsAPI.update(
+          editingItem.documentId,
+          dataToUpdate
+        );
         toast.success('Color updated successfully');
       } else {
-        const response = await colorsAPI.create(formData);
-        setData([...data, response.data]);
-        setIsAddDialogOpen(false);
+        await colorsAPI.create(formData);
         toast.success('Color created successfully');
       }
+      setIsEditDialogOpen(false);
+      setIsAddDialogOpen(false);
       setEditingItem(null);
+      fetchData(); // Refetch data
     } catch (error) {
       console.error('Failed to save color:', error);
       toast.error('Failed to save color');
@@ -182,8 +185,7 @@ export default function ColorsPage() {
                 <DialogDescription>
                   {editingItem
                     ? 'Update the color information below.'
-                    : 'Fill in the details for the new color.'
-                  }
+                    : 'Fill in the details for the new color.'}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
@@ -192,7 +194,9 @@ export default function ColorsPage() {
                   <Input
                     id="colorname"
                     value={formData.colorname || ''}
-                    onChange={(e) => setFormData({ ...formData, colorname: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, colorname: e.target.value })
+                    }
                     placeholder="e.g., HIJAU METALIK"
                   />
                 </div>

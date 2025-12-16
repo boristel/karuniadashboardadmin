@@ -29,7 +29,7 @@ const navigation = [
     name: 'Master Data',
     icon: Settings,
     children: [
-      { name: 'Categories', href: '/dashboard/master-data/categories', icon: Palette },
+      // { name: 'Categories', href: '/dashboard/master-data/categories', icon: Palette },
       { name: 'Vehicle Groups', href: '/dashboard/master-data/vehicle-groups', icon: Car },
       { name: 'Vehicle Types', href: '/dashboard/master-data/vehicle-types', icon: Car },
       { name: 'Colors', href: '/dashboard/master-data/colors', icon: Palette },

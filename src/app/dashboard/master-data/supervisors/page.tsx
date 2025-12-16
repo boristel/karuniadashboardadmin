@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CRUDTable } from '@/components/CRUDTable';
 import DashboardLayout from '@/components/DashboardLayout';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -30,7 +29,7 @@ interface Supervisor {
 }
 
 interface Branch {
-  id: string;
+  id: number;
   documentId: string;
   name: string;
   code: string;
@@ -54,7 +53,7 @@ export default function SupervisorsPage() {
       setLoading(true);
       const [supervisorsResponse, branchesResponse] = await Promise.all([
         supervisorsAPI.find(),
-        branchesAPI.find()
+        branchesAPI.find(),
       ]);
       setData(supervisorsResponse.data || []);
       setBranches(branchesResponse.data || []);
@@ -74,23 +73,25 @@ export default function SupervisorsPage() {
     {
       accessorKey: 'id',
       header: 'ID',
-      cell: ({ row }) => (
-        <Badge variant="outline">{row.getValue('id')}</Badge>
-      ),
+      cell: ({ row }) => <Badge variant="outline">{row.original.id}</Badge>,
     },
     {
       accessorKey: 'namasupervisor',
       header: 'Name',
       cell: ({ row }) => (
-        <div className="font-medium">{row.getValue('namasupervisor')}</div>
+        <div className="font-medium">{row.original.namasupervisor}</div>
       ),
     },
     {
       accessorKey: 'createdAt',
       header: 'Created',
       cell: ({ row }) => {
-        const date = new Date(row.getValue('createdAt'));
-        return <div className="text-sm text-gray-600">{date.toLocaleDateString()}</div>;
+        const date = new Date(row.original.createdAt);
+        return (
+          <div className="text-sm text-gray-600">
+            {date.toLocaleDateString()}
+          </div>
+        );
       },
     },
   ];
@@ -112,8 +113,8 @@ export default function SupervisorsPage() {
     if (window.confirm(`Are you sure you want to delete ${item.namasupervisor}?`)) {
       try {
         await supervisorsAPI.delete(item.documentId);
-        setData(data.filter(d => d.id !== item.id));
         toast.success('Supervisor deleted successfully');
+        fetchData(); // Refetch data
       } catch (error) {
         console.error('Failed to delete supervisor:', error);
         toast.error('Failed to delete supervisor');
@@ -125,22 +126,23 @@ export default function SupervisorsPage() {
     try {
       if (editingItem) {
         // Edit existing item
-        const response = await supervisorsAPI.update(editingItem.documentId, formData);
-        setData(data.map(item =>
-          item.id === editingItem.id
-            ? { ...item, ...response.data }
-            : item
-        ));
-        setIsEditDialogOpen(false);
+        const dataToUpdate = {
+          namasupervisor: formData.namasupervisor,
+        };
+        await supervisorsAPI.update(
+          editingItem.documentId,
+          dataToUpdate
+        );
         toast.success('Supervisor updated successfully');
       } else {
         // Add new item
-        const response = await supervisorsAPI.create(formData);
-        setData([...data, response.data]);
-        setIsAddDialogOpen(false);
+        await supervisorsAPI.create(formData);
         toast.success('Supervisor created successfully');
       }
+      setIsEditDialogOpen(false);
+      setIsAddDialogOpen(false);
       setEditingItem(null);
+      fetchData(); // Refetch data
     } catch (error) {
       console.error('Failed to save supervisor:', error);
       toast.error('Failed to save supervisor');
@@ -182,8 +184,7 @@ export default function SupervisorsPage() {
                 <DialogDescription>
                   {editingItem
                     ? 'Update the supervisor information below.'
-                    : 'Fill in the details for the new supervisor.'
-                  }
+                    : 'Fill in the details for the new supervisor.'}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
@@ -192,7 +193,9 @@ export default function SupervisorsPage() {
                   <Input
                     id="namasupervisor"
                     value={formData.namasupervisor || ''}
-                    onChange={(e) => setFormData({ ...formData, namasupervisor: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, namasupervisor: e.target.value })
+                    }
                     placeholder="e.g., ASEP SOPYAN"
                   />
                 </div>

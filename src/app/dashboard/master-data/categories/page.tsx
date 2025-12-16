@@ -10,11 +10,16 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { CRUDTable } from '@/components/CRUDTable';
 import DashboardLayout from '@/components/DashboardLayout';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -22,7 +27,7 @@ import { categoriesAPI } from '@/services/api';
 import { toast } from 'sonner';
 
 interface Category {
-  id: string;
+  id: number;
   documentId: string;
   name: string;
   description?: string;
@@ -66,7 +71,7 @@ export default function CategoriesPage() {
       accessorKey: 'name',
       header: 'Category Name',
       cell: ({ row }) => (
-        <div className="font-medium">{row.getValue('name')}</div>
+        <div className="font-medium">{row.original.name}</div>
       ),
     },
     {
@@ -74,7 +79,7 @@ export default function CategoriesPage() {
       header: 'Description',
       cell: ({ row }) => (
         <div className="text-sm text-gray-600 max-w-xs truncate">
-          {row.getValue('description') || '-'}
+          {row.original.description || '-'}
         </div>
       ),
     },
@@ -82,8 +87,12 @@ export default function CategoriesPage() {
       accessorKey: 'status',
       header: 'Status',
       cell: ({ row }) => (
-        <Badge variant={row.getValue('status') === 'active' ? 'default' : 'secondary'}>
-          {row.getValue('status')}
+        <Badge
+          variant={
+            row.original.status === 'active' ? 'default' : 'secondary'
+          }
+        >
+          {row.original.status}
         </Badge>
       ),
     },
@@ -91,8 +100,12 @@ export default function CategoriesPage() {
       accessorKey: 'createdAt',
       header: 'Created',
       cell: ({ row }) => {
-        const date = new Date(row.getValue('createdAt'));
-        return <div className="text-sm text-gray-600">{date.toLocaleDateString()}</div>;
+        const date = new Date(row.original.createdAt);
+        return (
+          <div className="text-sm text-gray-600">
+            {date.toLocaleDateString()}
+          </div>
+        );
       },
     },
   ];
@@ -113,11 +126,13 @@ export default function CategoriesPage() {
   };
 
   const handleDelete = async (item: Category) => {
-    if (window.confirm(`Are you sure you want to delete ${item.name} category?`)) {
+    if (
+      window.confirm(`Are you sure you want to delete ${item.name} category?`)
+    ) {
       try {
         await categoriesAPI.delete(item.documentId);
-        setData(data.filter(d => d.id !== item.id));
         toast.success('Category deleted successfully');
+        fetchData(); // Refetch data
       } catch (error) {
         console.error('Failed to delete category:', error);
         toast.error('Failed to delete category');
@@ -126,29 +141,33 @@ export default function CategoriesPage() {
   };
 
   const handleSave = async () => {
+    if (!formData.name) {
+      toast.error('Category name cannot be empty');
+      return;
+    }
+
     try {
       if (editingItem) {
         // Edit existing item
-        const response = await categoriesAPI.update(editingItem.documentId, {
-          ...formData,
-        });
-        setData(data.map(item =>
-          item.id === editingItem.id
-            ? { ...item, ...response.data }
-            : item
-        ));
-        setIsEditDialogOpen(false);
+        const dataToUpdate = {
+          name: formData.name,
+          description: formData.description,
+          status: formData.status,
+        };
+        await categoriesAPI.update(
+          editingItem.documentId,
+          dataToUpdate
+        );
         toast.success('Category updated successfully');
       } else {
         // Add new item
-        const response = await categoriesAPI.create({
-          ...formData,
-        });
-        setData([...data, response.data]);
-        setIsAddDialogOpen(false);
+        await categoriesAPI.create(formData);
         toast.success('Category created successfully');
       }
+      setIsEditDialogOpen(false);
+      setIsAddDialogOpen(false);
       setEditingItem(null);
+      fetchData(); // Refetch data
     } catch (error) {
       console.error('Failed to save category:', error);
       toast.error('Failed to save category');
@@ -190,8 +209,7 @@ export default function CategoriesPage() {
                 <DialogDescription>
                   {editingItem
                     ? 'Update the category information below.'
-                    : 'Fill in the details for the new category.'
-                  }
+                    : 'Fill in the details for the new category.'}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
@@ -200,7 +218,9 @@ export default function CategoriesPage() {
                   <Input
                     id="name"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
                     placeholder="e.g., Scooter"
                   />
                 </div>
@@ -210,7 +230,9 @@ export default function CategoriesPage() {
                   <Input
                     id="description"
                     value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
                     placeholder="e.g., Automatic scooter motorcycles"
                   />
                 </div>
@@ -219,7 +241,9 @@ export default function CategoriesPage() {
                   <Label htmlFor="status">Status</Label>
                   <Select
                     value={formData.status}
-                    onValueChange={(value: 'active' | 'inactive') => setFormData({ ...formData, status: value })}
+                    onValueChange={(value: 'active' | 'inactive') =>
+                      setFormData({ ...formData, status: value })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select status" />

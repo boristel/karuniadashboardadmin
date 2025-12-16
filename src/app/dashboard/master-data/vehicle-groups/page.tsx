@@ -10,11 +10,9 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CRUDTable } from '@/components/CRUDTable';
 import DashboardLayout from '@/components/DashboardLayout';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -61,20 +59,22 @@ export default function VehicleGroupsPage() {
 
       const [vehicleGroupsResponse, categoriesResponse] = await Promise.all([
         vehicleGroupsAPI.find(),
-        categoriesAPI.find()
+        categoriesAPI.find(),
       ]);
 
       console.log('📊 [VehicleGroups] API Responses received:', {
         vehicleGroups: {
           hasData: !!vehicleGroupsResponse?.data,
           dataCount: vehicleGroupsResponse?.data?.length || 0,
-          keys: vehicleGroupsResponse ? Object.keys(vehicleGroupsResponse) : 'null'
+          keys: vehicleGroupsResponse
+            ? Object.keys(vehicleGroupsResponse)
+            : 'null',
         },
         categories: {
           hasData: !!categoriesResponse?.data,
           dataCount: categoriesResponse?.data?.length || 0,
-          keys: categoriesResponse ? Object.keys(categoriesResponse) : 'null'
-        }
+          keys: categoriesResponse ? Object.keys(categoriesResponse) : 'null',
+        },
       });
 
       const vehicleGroupsData = vehicleGroupsResponse.data || [];
@@ -84,7 +84,7 @@ export default function VehicleGroupsPage() {
         vehicleGroupsCount: vehicleGroupsData.length,
         categoriesCount: categoriesData.length,
         vehicleGroupsSample: vehicleGroupsData.slice(0, 2),
-        categoriesSample: categoriesData.slice(0, 2)
+        categoriesSample: categoriesData.slice(0, 2),
       });
 
       setData(vehicleGroupsData);
@@ -108,23 +108,25 @@ export default function VehicleGroupsPage() {
     {
       accessorKey: 'id',
       header: 'ID',
-      cell: ({ row }) => (
-        <Badge variant="outline">{row.getValue('id')}</Badge>
-      ),
+      cell: ({ row }) => <Badge variant="outline">{row.original.id}</Badge>,
     },
     {
       accessorKey: 'name',
       header: 'Vehicle Group',
       cell: ({ row }) => (
-        <div className="font-medium">{row.getValue('name')}</div>
+        <div className="font-medium">{row.original.name}</div>
       ),
     },
     {
       accessorKey: 'createdAt',
       header: 'Created',
       cell: ({ row }) => {
-        const date = new Date(row.getValue('createdAt'));
-        return <div className="text-sm text-gray-600">{date.toLocaleDateString()}</div>;
+        const date = new Date(row.original.createdAt);
+        return (
+          <div className="text-sm text-gray-600">
+            {date.toLocaleDateString()}
+          </div>
+        );
       },
     },
   ];
@@ -146,8 +148,8 @@ export default function VehicleGroupsPage() {
     if (window.confirm(`Are you sure you want to delete ${item.name} group?`)) {
       try {
         await vehicleGroupsAPI.delete(item.documentId);
-        setData(data.filter(d => d.id !== item.id));
         toast.success('Vehicle group deleted successfully');
+        fetchData(); // Refetch data
       } catch (error) {
         console.error('Failed to delete vehicle group:', error);
         toast.error('Failed to delete vehicle group');
@@ -159,22 +161,23 @@ export default function VehicleGroupsPage() {
     try {
       if (editingItem) {
         // Edit existing item
-        const response = await vehicleGroupsAPI.update(editingItem.documentId, formData);
-        setData(data.map(item =>
-          item.id === editingItem.id
-            ? { ...item, ...response.data }
-            : item
-        ));
-        setIsEditDialogOpen(false);
+        const dataToUpdate = {
+          name: formData.name,
+        };
+        await vehicleGroupsAPI.update(
+          editingItem.documentId,
+          dataToUpdate
+        );
         toast.success('Vehicle group updated successfully');
       } else {
         // Add new item
-        const response = await vehicleGroupsAPI.create(formData);
-        setData([...data, response.data]);
-        setIsAddDialogOpen(false);
+        await vehicleGroupsAPI.create(formData);
         toast.success('Vehicle group created successfully');
       }
+      setIsEditDialogOpen(false);
+      setIsAddDialogOpen(false);
       setEditingItem(null);
+      fetchData(); // Refetch data
     } catch (error) {
       console.error('Failed to save vehicle group:', error);
       toast.error('Failed to save vehicle group');
@@ -211,13 +214,14 @@ export default function VehicleGroupsPage() {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>
-                  {editingItem ? 'Edit Vehicle Group' : 'Add New Vehicle Group'}
+                  {editingItem
+                    ? 'Edit Vehicle Group'
+                    : 'Add New Vehicle Group'}
                 </DialogTitle>
                 <DialogDescription>
                   {editingItem
                     ? 'Update the vehicle group information below.'
-                    : 'Fill in the details for the new vehicle group.'
-                  }
+                    : 'Fill in the details for the new vehicle group.'}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
@@ -226,7 +230,9 @@ export default function VehicleGroupsPage() {
                   <Input
                     id="name"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
                     placeholder="e.g., ALL NEW XENIA"
                   />
                 </div>
