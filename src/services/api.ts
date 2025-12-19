@@ -385,19 +385,50 @@ export const articlesAPI = createCRUDAPI('articles');
 export const salesMonitoringAPI = {
   // Get all sales profiles with their SPK data and populated relationships
   getSalesProfilesWithSPK: async () => {
-    const response = await api.get('/sales-profiles', {
-      params: {
-        populate: '*',
-        filters: {
-          approved: true,
-          blocked: false
-        },
-        sort: {
-          updatedAt: 'desc'
-        }
+    // Use URL-encoded populate parameters for Strapi
+    const populateParams = [
+      'populate[photo_profile]',
+      'populate[spks][populate][unitInfo][populate][vehicleType]',
+      'populate[spks][populate][unitInfo][populate][color]',
+      'populate[spks][populate][detailInfo]',
+      'populate[spks][populate][paymentInfo]'
+    ];
+
+    const params = {
+      populate: populateParams.join('&'),
+      filters: {
+        blocked: false
+      },
+      sort: 'updatedAt:desc'
+    };
+
+    console.log('🔍 [SalesMonitoring] API Request params:', JSON.stringify(params, null, 2));
+
+    try {
+      // Build the URL manually for complex populate
+      const queryString = new URLSearchParams();
+      populateParams.forEach(param => queryString.append(param, ''));
+      queryString.append('filters[blocked]', 'false');
+      queryString.append('sort', 'updatedAt:desc');
+
+      const response = await api.get(`/sales-profiles?${queryString.toString()}`);
+      console.log('✅ [SalesMonitoring] API Response status:', response.status);
+      console.log('📊 [SalesMonitoring] Response data count:', response.data?.data?.length || 0);
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ [SalesMonitoring] API Error:', error.response?.status, error.response?.data);
+      // Try simpler populate if complex one fails
+      try {
+        console.log('🔄 [SalesMonitoring] Trying simpler populate...');
+        const response = await api.get('/sales-profiles?populate=*');
+        console.log('✅ [SalesMonitoring] Simple populate Response status:', response.status);
+        console.log('📊 [SalesMonitoring] Response data count:', response.data?.data?.length || 0);
+        return response.data;
+      } catch (fallbackError: any) {
+        console.error('❌ [SalesMonitoring] Fallback API Error:', fallbackError.response?.status, fallbackError.response?.data);
+        throw fallbackError;
       }
-    });
-    return response.data;
+    }
   },
 
   // Get sales profiles filtered by online status

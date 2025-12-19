@@ -12,6 +12,7 @@ import { MapPin, Phone, Mail, Activity, Map as MapIcon, RefreshCw, User, Car } f
 import { salesMonitoringAPI } from '@/services/api';
 import { toast } from 'sonner';
 import { getOptimalImageUrl } from '@/utils/imageUtils';
+import { GoogleMapsLoader } from '@/utils/GoogleMapsLoader';
 
 interface SalesStaff {
   id: number;
@@ -75,8 +76,26 @@ export default function SalesMonitoringPage() {
   const fetchSalesData = async () => {
     try {
       setLoading(true);
+      console.log('🔄 [SalesMonitoring] Fetching sales data...');
       const response = await salesMonitoringAPI.getSalesProfilesWithSPK();
-      setSalesData(response.data || []);
+      const salesData = response.data || [];
+      console.log('📊 [SalesMonitoring] Received', salesData.length, 'sales profiles');
+
+      // Log first few items to check structure
+      if (salesData.length > 0) {
+        const firstProfile = salesData[0];
+        console.log('📝 [SalesMonitoring] First sales profile structure:', {
+          id: firstProfile.id,
+          surename: firstProfile.surename,
+          city: firstProfile.city,
+          location: firstProfile.location,
+          online_stat: firstProfile.online_stat,
+          photo_profile: firstProfile.photo_profile ? 'exists' : 'null'
+        });
+        console.log('📸 [SalesMonitoring] Photo profile structure:', firstProfile.photo_profile);
+      }
+
+      setSalesData(salesData);
     } catch (error) {
       console.error('Failed to fetch sales data:', error);
       toast.error('Failed to load sales data');
@@ -125,17 +144,28 @@ export default function SalesMonitoringPage() {
   const updateMarkers = useCallback(() => {
     if (!map) return;
 
+    console.log('🗺️ [SalesMonitoring] Updating markers for', salesData.length, 'sales profiles');
+
     // Clear existing markers
     markers.forEach(marker => marker.setMap(null));
 
     const newMarkers: any[] = [];
     const bounds = new (window.google.maps.LatLngBounds as any)();
+    let markerCount = 0;
 
     salesData
       .filter(sales => {
         // Only show sales with location data
-        if (!sales.location) return false;
-        return selectedBranch === 'all' || sales.city === selectedBranch;
+        if (!sales.location || !sales.location.latitude || !sales.location.longitude) {
+          console.log('⚠️ [SalesMonitoring] Skipping', sales.surename, '- no location data');
+          return false;
+        }
+        const show = selectedBranch === 'all' || sales.city === selectedBranch;
+        if (show) {
+          markerCount++;
+          console.log('✅ [SalesMonitoring] Adding marker for', sales.surename, 'at', sales.location.latitude, sales.location.longitude);
+        }
+        return show;
       })
       .forEach(sales => {
         const marker = new (window.google.maps.Marker as any)({
@@ -153,10 +183,21 @@ export default function SalesMonitoringPage() {
         });
 
         // Create info window content with photo, name, and WhatsApp
-        const photoUrl = getOptimalImageUrl(sales.photo_profile);
+        let photoUrl = '';
+        if (sales.photo_profile) {
+          // Use thumbnail or small image as per sample-data.md structure
+          if (sales.photo_profile.formats && sales.photo_profile.formats.small) {
+            photoUrl = sales.photo_profile.formats.small.url;
+          } else if (sales.photo_profile.formats && sales.photo_profile.formats.thumbnail) {
+            photoUrl = sales.photo_profile.formats.thumbnail.url;
+          } else if (sales.photo_profile.url) {
+            photoUrl = sales.photo_profile.url;
+          }
+        }
+
         const infoContent = `
           <div style="padding: 10px; min-width: 200px; display: flex; align-items: center; gap: 10px;">
-            ${photoUrl ? `<img src="${photoUrl}" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;" />` : '<div style="width: 50px; height: 50px; border-radius: 50%; background-color: #e5e7eb; display: flex; align-items: center; justify-content: center;"><span style="font-weight: bold; color: #6b7280;">${sales.surename.charAt(0)}</span></div>'}
+            ${photoUrl ? `<img src="http://localhost:1337${photoUrl}" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;" />` : '<div style="width: 50px; height: 50px; border-radius: 50%; background-color: #e5e7eb; display: flex; align-items: center; justify-content: center;"><span style="font-weight: bold; color: #6b7280;">${sales.surename.charAt(0)}</span></div>'}
             <div>
               <h3 style="margin: 0 0 5px 0; font-weight: bold; font-size: 14px;">${sales.surename}</h3>
               <p style="margin: 2px 0; font-size: 12px; color: #6b7280;">📱 ${sales.wanumber || 'No WhatsApp'}</p>
@@ -180,6 +221,7 @@ export default function SalesMonitoringPage() {
       });
 
     setMarkers(newMarkers);
+    console.log('📍 [SalesMonitoring] Added', markerCount, 'markers to map');
 
     // Fit map to show all markers
     if (!bounds.isEmpty()) {
@@ -203,19 +245,10 @@ export default function SalesMonitoringPage() {
       return;
     }
 
-    if (!window.google || !window.google.maps) {
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}`;
-      script.async = true;
-      script.defer = true;
-      script.onload = () => initMap();
-      script.onerror = () => {
+    GoogleMapsLoader.load(GOOGLE_MAPS_API_KEY, initMap)
+      .catch(() => {
         console.error('Failed to load Google Maps API');
-      };
-      document.body.appendChild(script);
-    } else {
-      initMap();
-    }
+      });
   }, [initMap]);
 
   useEffect(() => {
@@ -370,7 +403,9 @@ export default function SalesMonitoringPage() {
                         className="flex items-center space-x-4 p-3 border rounded-lg hover:bg-gray-50"
                       >
                         <Avatar>
-                          <AvatarImage src={getOptimalImageUrl(sales.photo_profile)} />
+                          <AvatarImage
+                            src={sales.photo_profile?.formats?.small?.url || sales.photo_profile?.formats?.thumbnail?.url || sales.photo_profile?.url || undefined}
+                          />
                           <AvatarFallback>{sales.surename.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">

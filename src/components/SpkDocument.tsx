@@ -8,451 +8,491 @@ import {
   Font,
 } from '@react-pdf/renderer';
 
-// Register font for better typography support
-Font.register({
-  family: 'Helvetica',
-  src: 'https://cdn.jsdelivr.net/npm/@react-pdf/font@2.2.2/fonts/Roboto-Regular.ttf'
-});
-
-Font.register({
-  family: 'Helvetica-Bold',
-  src: 'https://cdn.jsdelivr.net/npm/@react-pdf/font@2.2.2/fonts/Roboto-Bold.ttf'
-});
+// Use standard fonts that are available in most systems
+// Logo will be handled dynamically to avoid import issues
 
 interface SpkDocumentProps {
   data: {
     spkNumber: string;
     date: string;
     customer: {
-      nama: string;
+      namaLengkap: string;
       alamat: string;
-      noHp: string;
+      kecamatan: string;
+      kotaKabupaten: string;
+      kodePos: string;
+      noTelepon: string;
+      noTeleponAlt: string;
       email: string;
-      ktp: string;
+      noKtp: string;
+      npwp: string;
+      pembayaran: string;
+      jenisPerusahaan: string;
+      namaPerusahaan: string;
+      alamatPerusahaan: string;
+      npwpPerusahaan: string;
+    };
+    vehicle: {
+      tipeKendaraan: string;
+      tahunPembuatan: string;
+      warnaKendaraan: string;
+      warnaInterior: string;
+      noMesin: string;
+      noRangka: string;
+      hargaSatuan: string;
+      aksesoris: Array<{
+        nama: string;
+        harga: string;
+      }>;
+      totalHarga: string;
+      uangMuka: string;
+      sisaPembayaran: string;
+      alamatKirim: string;
+      jangkaWaktuPengiriman: string;
+      namaPenerima: string;
     };
     sales: {
       nama: string;
-      noHp: string;
-      email: string;
-    };
-    vehicle: {
-      type: string;
-      warna: string;
-      noRangka: string;
-      noMesin: string;
-      tahun: string;
-      harga: string;
-    };
-    payment: {
-      type: 'cash' | 'credit';
-      dp: string;
-      tenor?: string;
-      angsuran?: string;
-      bunga?: string;
     };
     signatures: {
-      spv: string;
-      sales: string;
       customer: string;
+      cabang: string;
     };
   };
 }
 
 const styles = StyleSheet.create({
   page: {
-    fontSize: 10,
-    fontFamily: 'Helvetica',
-    padding: 20,
+    fontSize: 11,
+    fontFamily: 'Helvetica', // Use system font
+    padding: 40,
     backgroundColor: '#ffffff',
+    lineHeight: 1.5,
   },
-  header: {
-    flexDirection: 'row',
-    marginBottom: 20,
-    borderBottom: 2,
-    borderBottomColor: '#000',
-    paddingBottom: 10,
+  // Header section
+  logoSection: {
+    marginBottom: 10,
   },
-  headerLeft: {
-    flex: 1,
-    borderRight: 1,
-    borderRightColor: '#ccc',
-    paddingRight: 10,
+  logo: {
+    width: 300,
+    height: 50,
+    objectFit: 'contain',
   },
-  headerCenter: {
-    flex: 2,
-    paddingHorizontal: 10,
+  // Title section
+  titleSection: {
     textAlign: 'center',
+    marginBottom: 20,
   },
-  headerRight: {
-    flex: 1,
-    borderLeft: 1,
-    borderLeftColor: '#ccc',
-    paddingLeft: 10,
-  },
-  title: {
-    fontSize: 14,
+  mainTitle: {
+    fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 5,
-    fontFamily: 'Helvetica-Bold',
   },
-  companyInfo: {
-    fontSize: 9,
-    lineHeight: 1.2,
+  subtitle: {
+    fontSize: 11,
+    color: '#555',
   },
-  twoColumn: {
+  // SPK Info
+  spkInfoSection: {
     flexDirection: 'row',
-    marginBottom: 15,
-  },
-  leftColumn: {
-    flex: 1,
-    marginRight: 10,
-    border: 1,
-    borderColor: '#000',
-    padding: 10,
-  },
-  rightColumn: {
-    flex: 1,
-    marginLeft: 10,
-    border: 1,
-    borderColor: '#000',
-    padding: 10,
-  },
-  section: {
-    marginBottom: 15,
-    border: 1,
-    borderColor: '#000',
-  },
-  sectionHeader: {
-    backgroundColor: '#f0f0f0',
-    borderBottom: 1,
-    borderBottomColor: '#000',
-    padding: 5,
-    fontWeight: 'bold',
-    fontFamily: 'Helvetica-Bold',
-    textAlign: 'center',
-  },
-  sectionContent: {
-    padding: 10,
-  },
-  vehicleGrid: {
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  vehicleRow: {
-    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
     borderBottom: 1,
     borderBottomColor: '#ccc',
-    padding: 3,
+    paddingBottom: 10,
   },
-  vehicleRowLast: {
-    borderBottom: 0,
-  },
-  vehicleLabel: {
-    flex: 1,
+  spkNo: {
+    fontSize: 11,
     fontWeight: 'bold',
-    fontFamily: 'Helvetica-Bold',
-    borderRight: 1,
-    borderRightColor: '#ccc',
-    paddingRight: 5,
   },
-  vehicleValue: {
-    flex: 2,
-    paddingLeft: 5,
+  spkDate: {
+    fontSize: 11,
   },
-  paymentGrid: {
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  paymentRow: {
+  // Form sections
+  formContainer: {
     flexDirection: 'row',
-    borderBottom: 1,
-    borderBottomColor: '#ccc',
-    padding: 3,
-    minHeight: 20,
-  },
-  paymentRowLast: {
-    borderBottom: 0,
-  },
-  paymentLabel: {
-    flex: 1,
-    fontWeight: 'bold',
-    fontFamily: 'Helvetica-Bold',
-    borderRight: 1,
-    borderRightColor: '#ccc',
-    paddingRight: 5,
-  },
-  paymentValue: {
-    flex: 2,
-    paddingLeft: 5,
-  },
-  footer: {
-    marginTop: 20,
-    fontSize: 8,
-    textAlign: 'justify',
-    fontStyle: 'italic',
-    marginBottom: 20,
-    lineHeight: 1.3,
-  },
-  signatureSection: {
-    marginTop: 30,
-    flexDirection: 'row',
-  },
-  signatureColumn: {
-    flex: 1,
-    textAlign: 'center',
-  },
-  signatureBox: {
-    borderTop: 1,
-    borderTopColor: '#000',
-    marginTop: 40,
-    paddingTop: 5,
-    fontSize: 9,
-  },
-  signatureTitle: {
-    fontWeight: 'bold',
-    fontFamily: 'Helvetica-Bold',
+    gap: 20,
     marginBottom: 20,
   },
-  boldText: {
-    fontFamily: 'Helvetica-Bold',
-  },
-  borderRight: {
-    borderRight: 1,
-    borderRightColor: '#ccc',
-  },
-  logoPlaceholder: {
-    width: 60,
-    height: 40,
+  formSection: {
+    flex: 1,
     border: 1,
     borderColor: '#ccc',
-    justifyContent: 'center',
-    alignItems: 'center',
-    fontSize: 8,
-    color: '#666',
+    padding: 10,
+  },
+  formTitle: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 10,
+    textDecoration: 'underline',
+  },
+  fieldContainer: {
+    marginBottom: 10,
+  },
+  fieldLabel: {
+    fontSize: 9,
+    fontWeight: 'bold',
+    marginBottom: 2,
+  },
+  fieldRow: {
+    flexDirection: 'row',
+    marginBottom: 5,
+  },
+  fieldInput: {
+    flex: 1,
+    borderBottom: 1,
+    borderBottomColor: '#ccc',
+    fontSize: 10,
+    minHeight: 16,
+    paddingTop: 2,
+  },
+  // Table
+  table: {
+    width: '100%',
+    marginBottom: 10,
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#f0f0f0',
+    borderBottom: 1,
+    borderBottomColor: '#ccc',
+  },
+  tableHeaderCell: {
+    flex: 1,
+    padding: 5,
+    fontSize: 9,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    borderRight: 1,
+    borderRightColor: '#ccc',
+  },
+  tableHeaderCellLast: {
+    borderRight: 'none',
+  },
+  tableHeaderCellPrice: {
+    flex: 1.5,
+    textAlign: 'right',
+    borderRight: 1,
+    borderRightColor: '#ccc',
+    padding: 5,
+    fontSize: 9,
+    fontWeight: 'bold',
+  },
+  tableHeaderCellPriceLast: {
+    borderRight: 'none',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    borderBottom: 1,
+    borderBottomColor: '#eee',
+  },
+  tableRowTotal: {
+    borderTop: 2,
+    borderTopColor: '#000',
+    borderBottom: 'none',
+  },
+  tableCell: {
+    flex: 1,
+    padding: 5,
+    fontSize: 10,
+    borderRight: 1,
+    borderRightColor: '#ccc',
+  },
+  tableCellLast: {
+    borderRight: 'none',
+  },
+  tableCellPrice: {
+    flex: 1.5,
+    textAlign: 'right',
+    borderRight: 1,
+    borderRightColor: '#ccc',
+    padding: 5,
+    fontSize: 10,
+  },
+  tableCellPriceLast: {
+    borderRight: 'none',
+  },
+  // Payment details
+  paymentRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: 5,
+  },
+  paymentLabel: {
+    width: 120,
+    fontSize: 10,
+    textAlign: 'right',
+    paddingRight: 10,
+  },
+  paymentValue: {
+    width: 100,
+    fontSize: 10,
+    textAlign: 'right',
+    fontWeight: 'bold',
+  },
+  // Notes
+  notesSection: {
+    fontSize: 9,
+    marginBottom: 30,
+  },
+  notesTitle: {
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  notesList: {
+    paddingLeft: 20,
+  },
+  noteItem: {
+    marginBottom: 2,
+  },
+  // Signatures
+  signatureSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 20,
+  },
+  signatureBox: {
+    width: 150,
+    textAlign: 'center',
+  },
+  signatureLabel: {
+    fontSize: 10,
+    marginBottom: 30,
+  },
+  signatureLine: {
+    borderTop: 1,
+    borderTopColor: '#000',
+    paddingTop: 5,
+    fontSize: 10,
   },
 });
 
 const SpkDocument: React.FC<SpkDocumentProps> = ({ data }) => {
+  const formatCurrency = (amount: string) => {
+    const num = parseInt(amount.replace(/\D/g, ''));
+    return `Rp ${num.toLocaleString('id-ID')}`;
+  };
+
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        {/* Header Section */}
-        <View style={styles.header}>
-          {/* Logo */}
-          <View style={styles.headerLeft}>
-            <View style={styles.logoPlaceholder}>
-              <Text>LOGO</Text>
-            </View>
-          </View>
-
-          {/* Company Info */}
-          <View style={styles.headerCenter}>
-            <Text style={styles.title}>SURAT PESANAN KENDARAAN</Text>
-            <Text style={[styles.companyInfo, { marginTop: 5 }]}>
-              PT. SINAR BAJA MOTOR
-            </Text>
-            <Text style={styles.companyInfo}>
-              Jl. MH. Thamrin No. 9 Cikarang - 17550
-            </Text>
-            <Text style={styles.companyInfo}>
-              Telp: (021) 8901234 Fax: (021) 8901235
-            </Text>
-            <Text style={styles.companyInfo}>
-              E-mail: info@sinarbajamotor.co.id
-            </Text>
-            <Text style={styles.companyInfo}>
-              Website: www.sinarbajamotor.co.id
-            </Text>
-          </View>
-
-          {/* SPK Number & Date */}
-          <View style={styles.headerRight}>
-            <Text style={[styles.boldText, { marginBottom: 5 }]}>No. SPK</Text>
-            <Text style={{ marginBottom: 10, borderBottom: 1, borderBottomColor: '#000', paddingBottom: 2 }}>
-              {data.spkNumber}
-            </Text>
-            <Text style={[styles.boldText, { marginBottom: 5 }]}>Tanggal</Text>
-            <Text style={{ borderBottom: 1, borderBottomColor: '#000', paddingBottom: 2 }}>
-              {data.date}
-            </Text>
+        {/* Header with Company Title */}
+        <View style={styles.logoSection}>
+          <View style={{ height: 50, justifyContent: 'center', alignItems: 'center' }}>
+            <Text style={{ fontSize: 20, fontWeight: 'bold' }}>KARUNIA MOTOR</Text>
           </View>
         </View>
 
-        {/* Two Column Section: Customer & Sales Info */}
-        <View style={styles.twoColumn}>
-          {/* Customer Information */}
-          <View style={styles.leftColumn}>
-            <Text style={[styles.boldText, { marginBottom: 8, textAlign: 'center', fontSize: 11 }]}>
-              DATA PEMBELI
-            </Text>
-            <View style={{ marginBottom: 5 }}>
-              <Text style={[styles.boldText, { fontSize: 9 }]}>Nama</Text>
-              <Text style={{ borderBottom: 1, borderBottomColor: '#ccc', padding: 2 }}>
-                {data.customer.nama}
-              </Text>
-            </View>
-            <View style={{ marginBottom: 5 }}>
-              <Text style={[styles.boldText, { fontSize: 9 }]}>Alamat</Text>
-              <Text style={{ borderBottom: 1, borderBottomColor: '#ccc', padding: 2, minHeight: 30 }}>
-                {data.customer.alamat}
-              </Text>
-            </View>
-            <View style={{ marginBottom: 5 }}>
-              <Text style={[styles.boldText, { fontSize: 9 }]}>No. HP</Text>
-              <Text style={{ borderBottom: 1, borderBottomColor: '#ccc', padding: 2 }}>
-                {data.customer.noHp}
-              </Text>
-            </View>
-            <View style={{ marginBottom: 5 }}>
-              <Text style={[styles.boldText, { fontSize: 9 }]}>Email</Text>
-              <Text style={{ borderBottom: 1, borderBottomColor: '#ccc', padding: 2 }}>
-                {data.customer.email}
-              </Text>
-            </View>
-            <View style={{ marginBottom: 5 }}>
-              <Text style={[styles.boldText, { fontSize: 9 }]}>No. KTP</Text>
-              <Text style={{ borderBottom: 1, borderBottomColor: '#ccc', padding: 2 }}>
-                {data.customer.ktp}
-              </Text>
-            </View>
-          </View>
-
-          {/* Sales Information */}
-          <View style={styles.rightColumn}>
-            <Text style={[styles.boldText, { marginBottom: 8, textAlign: 'center', fontSize: 11 }]}>
-              DATA SALES
-            </Text>
-            <View style={{ marginBottom: 5 }}>
-              <Text style={[styles.boldText, { fontSize: 9 }]}>Nama</Text>
-              <Text style={{ borderBottom: 1, borderBottomColor: '#ccc', padding: 2 }}>
-                {data.sales.nama}
-              </Text>
-            </View>
-            <View style={{ marginBottom: 5 }}>
-              <Text style={[styles.boldText, { fontSize: 9 }]}>No. HP</Text>
-              <Text style={{ borderBottom: 1, borderBottomColor: '#ccc', padding: 2 }}>
-                {data.sales.noHp}
-              </Text>
-            </View>
-            <View style={{ marginBottom: 5 }}>
-              <Text style={[styles.boldText, { fontSize: 9 }]}>Email</Text>
-              <Text style={{ borderBottom: 1, borderBottomColor: '#ccc', padding: 2 }}>
-                {data.sales.email}
-              </Text>
-            </View>
-          </View>
+        <View style={styles.titleSection}>
+          <Text style={styles.mainTitle}>SURAT PESANAN KENDARAAN</Text>
+          <Text style={styles.subtitle}>No. : {data.spkNumber}</Text>
+          <Text style={styles.subtitle}>{data.date}</Text>
         </View>
 
-        {/* Vehicle Details Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={{ fontSize: 11 }}>DATA KENDARAAN</Text>
+        {/* Forms Container */}
+        <View style={styles.formContainer}>
+          {/* Left Form - Customer Data */}
+          <View style={styles.formSection}>
+            <Text style={styles.formTitle}>DATA PEMESAN</Text>
+
+            <View style={styles.fieldContainer}>
+              <Text style={styles.fieldLabel}>Nama</Text>
+              <View style={styles.fieldInput}>
+                <Text>{data.customer.namaLengkap || '_'}</Text>
+              </View>
+            </View>
+
+            <View style={styles.fieldContainer}>
+              <Text style={styles.fieldLabel}>Alamat</Text>
+              <View style={[styles.fieldInput, { height: 40 }]}>
+                <Text>{data.customer.alamat || '_'}</Text>
+              </View>
+            </View>
+
+            <View style={styles.fieldContainer}>
+              <Text style={styles.fieldLabel}>Tlp / HP</Text>
+              <View style={styles.fieldInput}>
+                <Text>{data.customer.noTelepon || '_'}</Text>
+              </View>
+            </View>
+
+            <View style={styles.fieldContainer}>
+              <Text style={styles.fieldLabel}>Email</Text>
+              <View style={styles.fieldInput}>
+                <Text>{data.customer.email || '_'}</Text>
+              </View>
+            </View>
+
+            <View style={styles.fieldContainer}>
+              <Text style={styles.fieldLabel}>Pembayaran</Text>
+              <View style={styles.fieldInput}>
+                <Text>{data.customer.pembayaran || '_'}</Text>
+              </View>
+            </View>
           </View>
-          <View style={styles.sectionContent}>
-            <View style={styles.vehicleGrid}>
-              <View style={styles.vehicleRow}>
-                <Text style={styles.vehicleLabel}>Type Kendaraan</Text>
-                <Text style={styles.vehicleValue}>{data.vehicle.type}</Text>
+
+          {/* Right Form - Vehicle Data */}
+          <View style={styles.formSection}>
+            <Text style={styles.formTitle}>DATA KENDARAAN</Text>
+
+            <View style={styles.fieldContainer}>
+              <Text style={styles.fieldLabel}>Tipe</Text>
+              <View style={styles.fieldInput}>
+                <Text>{data.vehicle.tipeKendaraan || '_'}</Text>
               </View>
-              <View style={styles.vehicleRow}>
-                <Text style={styles.vehicleLabel}>Warna</Text>
-                <Text style={styles.vehicleValue}>{data.vehicle.warna}</Text>
+            </View>
+
+            <View style={styles.fieldContainer}>
+              <Text style={styles.fieldLabel}>Tahun</Text>
+              <View style={styles.fieldInput}>
+                <Text>{data.vehicle.tahunPembuatan || '_'}</Text>
               </View>
-              <View style={styles.vehicleRow}>
-                <Text style={styles.vehicleLabel}>No. Rangka</Text>
-                <Text style={styles.vehicleValue}>{data.vehicle.noRangka}</Text>
+            </View>
+
+            <View style={styles.fieldContainer}>
+              <Text style={styles.fieldLabel}>Warna</Text>
+              <View style={styles.fieldInput}>
+                <Text>{data.vehicle.warnaKendaraan || '_'}</Text>
               </View>
-              <View style={styles.vehicleRow}>
-                <Text style={styles.vehicleLabel}>No. Mesin</Text>
-                <Text style={styles.vehicleValue}>{data.vehicle.noMesin}</Text>
+            </View>
+
+            <View style={styles.fieldContainer}>
+              <Text style={styles.fieldLabel}>No. Rangka</Text>
+              <View style={styles.fieldInput}>
+                <Text>{data.vehicle.noRangka || 'Dilihat pada unit'}</Text>
               </View>
-              <View style={styles.vehicleRow}>
-                <Text style={styles.vehicleLabel}>Tahun Pembuatan</Text>
-                <Text style={styles.vehicleValue}>{data.vehicle.tahun}</Text>
-              </View>
-              <View style={[styles.vehicleRow, styles.vehicleRowLast]}>
-                <Text style={styles.vehicleLabel}>Harga</Text>
-                <Text style={styles.vehicleValue}>{data.vehicle.harga}</Text>
+            </View>
+
+            <View style={styles.fieldContainer}>
+              <Text style={styles.fieldLabel}>No. Mesin</Text>
+              <View style={styles.fieldInput}>
+                <Text>{data.vehicle.noMesin || 'Dilihat pada unit'}</Text>
               </View>
             </View>
           </View>
         </View>
 
-        {/* Payment Details Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={{ fontSize: 11 }}>DATA PEMBAYARAN</Text>
+        {/* Table */}
+        <View style={styles.table}>
+          <View style={styles.tableHeader}>
+            <View style={styles.tableHeaderCell}>
+              <Text>No.</Text>
+            </View>
+            <View style={styles.tableHeaderCell}>
+              <Text>Keterangan Barang</Text>
+            </View>
+            <View style={[styles.tableHeaderCell, { flex: 2 }]}>
+              <Text>Keterangan</Text>
+            </View>
+            <View style={styles.tableHeaderCellPrice}>
+              <Text>Jumlah</Text>
+            </View>
+            <View style={styles.tableHeaderCellPriceLast}>
+              <Text>Harga</Text>
+            </View>
           </View>
-          <View style={styles.sectionContent}>
-            <View style={styles.paymentGrid}>
-              <View style={styles.paymentRow}>
-                <Text style={styles.paymentLabel}>Cara Pembayaran</Text>
-                <Text style={styles.paymentValue}>
-                  {data.payment.type === 'cash' ? 'TUNAI' : 'KREDIT'}
-                </Text>
+
+          <View style={styles.tableRow}>
+            <View style={styles.tableCell}>
+              <Text>1.</Text>
+            </View>
+            <View style={styles.tableCell}>
+              <Text>Unit Baru</Text>
+            </View>
+            <View style={[styles.tableCell, { flex: 2 }]}>
+              <Text>{data.vehicle.tipeKendaraan}</Text>
+            </View>
+            <View style={styles.tableCell}>
+              <Text>1 Unit</Text>
+            </View>
+            <View style={styles.tableCellPriceLast}>
+              <Text>{formatCurrency(data.vehicle.hargaSatuan)}</Text>
+            </View>
+          </View>
+
+          {/* Accessories if any */}
+          {data.vehicle.aksesoris && data.vehicle.aksesoris.length > 0 && data.vehicle.aksesoris.map((item, index) => (
+            <View key={index} style={styles.tableRow}>
+              <View style={styles.tableCell}>
+                <Text>{index + 2}.</Text>
               </View>
-              <View style={styles.paymentRow}>
-                <Text style={styles.paymentLabel}>Uang Muka (DP)</Text>
-                <Text style={styles.vehicleValue}>{data.payment.dp}</Text>
+              <View style={styles.tableCell}>
+                <Text>Accesories</Text>
+            </View>
+              <View style={[styles.tableCell, { flex: 2 }]}>
+                <Text>{item.nama}</Text>
               </View>
-              {data.payment.type === 'credit' && (
-                <>
-                  <View style={styles.paymentRow}>
-                    <Text style={styles.paymentLabel}>Tenor</Text>
-                    <Text style={styles.paymentValue}>{data.payment.tenor}</Text>
-                  </View>
-                  <View style={styles.paymentRow}>
-                    <Text style={styles.paymentLabel}>Angsuran</Text>
-                    <Text style={styles.paymentValue}>{data.payment.angsuran}</Text>
-                  </View>
-                  <View style={styles.paymentRow}>
-                    <Text style={styles.paymentLabel}>Bunga</Text>
-                    <Text style={styles.paymentValue}>{data.payment.bunga}</Text>
-                  </View>
-                </>
-              )}
-              <View style={[styles.paymentRow, styles.paymentRowLast]}>
-                <Text style={styles.paymentLabel}>Sisa Pembayaran</Text>
-                <Text style={styles.paymentValue}>
-                  {data.payment.type === 'cash'
-                    ? parseInt(data.vehicle.harga.replace(/\D/g, '')) - parseInt(data.payment.dp.replace(/\D/g, ''))
-                    : 'Sesuai Perjanjian Kredit'
-                  }
-                </Text>
+              <View style={styles.tableCell}>
+                <Text>1 Unit</Text>
+            </View>
+              <View style={styles.tableCellPriceLast}>
+                <Text>{formatCurrency(item.harga)}</Text>
               </View>
+            </View>
+          ))}
+
+          {/* Total */}
+          <View style={[styles.tableRow, styles.tableRowTotal]}>
+            <View style={[styles.tableCell, styles.tableCellLast]} colSpan={4}>
+              <Text style={{ textAlign: 'right', paddingRight: 10 }}>TOTAL HARGA</Text>
+            </View>
+            <View style={[styles.tableCellPriceLast, { fontWeight: 'bold' }]}>
+              <Text>{formatCurrency(data.vehicle.totalHarga)}</Text>
             </View>
           </View>
         </View>
 
-        {/* Footer Disclaimer */}
-        <View style={styles.footer}>
-          <Text>
-            Pembeli telah menyetujui dan memahami semua ketentuan dan syarat yang berlaku.
-            Kendaraan yang telah dibeli tidak dapat dikembalikan dengan alasan apapun.
-            Kelengkapan dokumen kendaraan akan diserahkan setelah pembayaran lunas.
-            Segala biaya administrasi dan pajak atas pembelian kendaraan menjadi tanggung jawab pembeli.
-          </Text>
+        {/* Payment Details */}
+        <View style={{ marginBottom: 20 }}>
+          <View style={styles.paymentRow}>
+            <Text style={styles.paymentLabel}>Uang Muka (30%):</Text>
+            <Text style={styles.paymentValue}>{formatCurrency(data.vehicle.uangMuka)}</Text>
+          </View>
+          <View style={styles.paymentRow}>
+            <Text style={styles.paymentLabel}>Sisa Pembayaran (70%):</Text>
+            <Text style={styles.paymentValue}>{formatCurrency(data.vehicle.sisaPembayaran)}</Text>
+          </View>
         </View>
 
-        {/* Signature Section */}
+        {/* Notes */}
+        <View style={styles.notesSection}>
+          <Text style={styles.notesTitle}>KETERANGAN:</Text>
+          <View style={styles.notesList}>
+            <Text style={styles.noteItem}>- Harga sewaktu-waktu dapat berubah tanpa pemberitahuan terlebih dahulu.</Text>
+            <Text style={styles.noteItem}>- Harga sudah termasuk BBN dan STNK.</Text>
+            <Text style={styles.noteItem}>- Waktu pengiriman paling lama 3 bulan sejak SPK ditandatangani.</Text>
+          </View>
+        </View>
+
+        {/* Delivery Information */}
+        <View style={{ marginBottom: 30 }}>
+          <Text style={[styles.fieldLabel, { marginBottom: 10 }]}>Alamat Kirim:</Text>
+          <View style={[styles.fieldInput, { height: 40 }]}>
+            <Text>{data.vehicle.alamatKirim || data.customer.alamat || '_'}</Text>
+          </View>
+        </View>
+
+        {/* Signatures */}
         <View style={styles.signatureSection}>
-          <View style={styles.signatureColumn}>
-            <Text style={styles.signatureTitle}>MENGETAHUI,</Text>
-            <Text style={styles.signatureTitle}>Kepala Cabang / SPV</Text>
-            <View style={styles.signatureBox}>
-              <Text>{data.signatures.spv}</Text>
+          <View style={styles.signatureBox}>
+            <Text style={styles.signatureLabel}>Pemesan</Text>
+            <View style={styles.signatureLine}>
+              <Text>{data.customer.namaLengkap}</Text>
             </View>
           </View>
-          <View style={styles.signatureColumn}>
-            <Text style={styles.signatureTitle}>Sales,</Text>
-            <View style={styles.signatureBox}>
-              <Text>{data.signatures.sales}</Text>
+
+          <View style={styles.signatureBox}>
+            <Text style={styles.signatureLabel}>Sales</Text>
+            <View style={styles.signatureLine}>
+              <Text>{data.sales.nama}</Text>
             </View>
           </View>
-          <View style={styles.signatureColumn}>
-            <Text style={styles.signatureTitle}>Pembeli,</Text>
-            <View style={styles.signatureBox}>
-              <Text>{data.signatures.customer}</Text>
+
+          <View style={styles.signatureBox}>
+            <Text style={styles.signatureLabel}>Cabang</Text>
+            <View style={styles.signatureLine}>
+              <Text>{data.signatures.cabang}</Text>
             </View>
           </View>
         </View>

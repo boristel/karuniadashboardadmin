@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Search, MapPin, RotateCcw } from 'lucide-react';
+import { GoogleMapsLoader } from '@/utils/GoogleMapsLoader';
 
 interface GoogleMapsSelectorProps {
   latitude?: number;
@@ -166,33 +167,10 @@ export default function GoogleMapsSelector({
       return;
     }
 
-    // Check if already loaded
-    if (window.google && window.google.maps) {
-      callback();
-      return;
-    }
-
-    const existingScript = document.getElementById('googleMapsScript');
-    if (!existingScript) {
-      const script = document.createElement('script');
-      script.id = 'googleMapsScript';
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&callback=initGoogleMaps`;
-      script.async = true;
-      script.defer = true;
-
-      // Global callback for Google Maps
-      (window as any).initGoogleMaps = () => {
-        callback();
-      };
-
-      script.onerror = () => {
+    GoogleMapsLoader.load(GOOGLE_MAPS_API_KEY, callback)
+      .catch(() => {
         setMapsError('Failed to load Google Maps API. Please check your internet connection.');
-      };
-
-      document.head.appendChild(script);
-    } else {
-      callback();
-    }
+      });
   }, []);
 
   // Initialize when component mounts

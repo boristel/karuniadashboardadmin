@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ExternalLink, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { GoogleMapsLoader } from '@/utils/GoogleMapsLoader';
 
 interface GoogleMapsViewerProps {
   latitude: number;
@@ -94,33 +95,10 @@ export default function GoogleMapsViewer({
       return;
     }
 
-    // Check if already loaded
-    if (window.google && window.google.maps) {
-      callback();
-      return;
-    }
-
-    const existingScript = document.getElementById('googleMapsScript');
-    if (!existingScript) {
-      const script = document.createElement('script');
-      script.id = 'googleMapsScript';
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&callback=initStaticGoogleMaps`;
-      script.async = true;
-      script.defer = true;
-
-      // Global callback for Google Maps
-      (window as any).initStaticGoogleMaps = () => {
-        callback();
-      };
-
-      script.onerror = () => {
+    GoogleMapsLoader.load(GOOGLE_MAPS_API_KEY, callback)
+      .catch(() => {
         setMapsError('Failed to load Google Maps API');
-      };
-
-      document.head.appendChild(script);
-    } else {
-      callback();
-    }
+      });
   };
 
   // Get Google Maps directions URL
