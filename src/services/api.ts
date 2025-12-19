@@ -378,6 +378,64 @@ export const salesStaffAPI = createCRUDAPI('sales-staffs');
 // Sales Profile API
 export const salesProfilesAPI = createCRUDAPI('sales-profiles');
 
+// Information/Articles API
+export const articlesAPI = createCRUDAPI('articles');
+
+// Sales Monitoring API
+export const salesMonitoringAPI = {
+  // Get all sales profiles with their SPK data and populated relationships
+  getSalesProfilesWithSPK: async () => {
+    const response = await api.get('/sales-profiles', {
+      params: {
+        populate: '*',
+        filters: {
+          approved: true,
+          blocked: false
+        },
+        sort: {
+          updatedAt: 'desc'
+        }
+      }
+    });
+    return response.data;
+  },
+
+  // Get sales profiles filtered by online status
+  getSalesProfilesByStatus: async (onlineStatus?: boolean) => {
+    const filters: any = {
+      approved: true,
+      blocked: false
+    };
+
+    if (onlineStatus !== undefined) {
+      filters.online_stat = onlineStatus;
+    }
+
+    const response = await api.get('/sales-profiles', {
+      params: {
+        populate: '*',
+        filters,
+        sort: {
+          updatedAt: 'desc'
+        }
+      }
+    });
+    return response.data;
+  },
+
+  // Update sales profile location and online status
+  updateSalesProfileLocation: async (profileId: number, location: { latitude: number; longitude: number }, onlineStatus: boolean) => {
+    const response = await api.put(`/sales-profiles/${profileId}`, {
+      data: {
+        location,
+        online_stat: onlineStatus,
+        updatedAt: new Date().toISOString()
+      }
+    });
+    return response.data;
+  }
+};
+
 // User management API
 export const usersAPI = {
   // Get all users with SALES role

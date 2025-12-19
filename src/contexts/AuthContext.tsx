@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authAPI } from '@/services/api';
+import { toast } from 'sonner';
 
 interface User {
   id: number;
@@ -9,6 +10,7 @@ interface User {
   email: string;
   confirmed: boolean;
   blocked: boolean;
+  role_custom?: string;  // Custom role field (ADMIN, SALES, etc.)
   role?: {
     id: number;
     name: string;
@@ -44,6 +46,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (token && storedUser) {
           // Verify token is still valid
           const userData = await authAPI.me();
+          
+          // ⭐ ROLE-BASED ACCESS CONTROL CHECK
+          console.log('🔐 checkAuth: Verifying role_custom for existing session:', userData?.role_custom);
+          
+          if (!userData.role_custom || userData.role_custom !== 'ADMIN') {
+            console.log('❌ checkAuth: User is not ADMIN - clearing session');
+            console.log('❌ checkAuth: role_custom value:', userData.role_custom || 'undefined');
+
+            // Show toast notification for session termination
+            toast.error('Session Terminated: Your account does not have administrative privileges. Access denied.', {
+              duration: 5000,
+              position: 'top-center'
+            });
+
+            // Clear unauthorized session
+            localStorage.removeItem('jwt_token');
+            localStorage.removeItem('user');
+
+            throw new Error('Access denied. Your session has been terminated.');
+          }
+          
+          console.log('✅ checkAuth: ADMIN role verified');
           setUser(userData);
         }
       } catch (error) {
@@ -103,6 +127,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('✅ User extracted successfully:', user ? 'YES' : 'NO');
       console.log('👤 User data:', user);
 
+      // ⭐ ROLE-BASED ACCESS CONTROL CHECK
+      console.log('🔐 Checking role_custom field:', user?.role_custom);
+      
+      if (!user.role_custom || user.role_custom !== 'ADMIN') {
+        console.log('❌ ACCESS DENIED: User role is not ADMIN');
+        console.log('❌ User role_custom value:', user.role_custom || 'undefined');
+        console.log('❌ User will NOT be logged in');
+
+        // Show toast notification for access denied
+        toast.error('Access Denied: Only administrators can access this dashboard. Please contact your system administrator.', {
+          duration: 5000,
+          position: 'top-center'
+        });
+
+        throw new Error('Access denied. Only administrators can access this dashboard. Please contact your system administrator.');
+      }
+      
+      console.log('✅ ADMIN role verified - user is authorized');
+      console.log('✅ Proceeding with login...');
+
       // Store JWT token
       localStorage.setItem('jwt_token', token);
       localStorage.setItem('user', JSON.stringify(user));
@@ -111,6 +155,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('🔄 Setting user in context...');
 
       setUser(user);
+
+      // Show success notification
+      toast.success(`Welcome back, ${user.username || 'Administrator'}!`, {
+        duration: 3000,
+        position: 'top-center'
+      });
 
       console.log('✅ LOGIN PROCESS COMPLETED SUCCESSFULLY');
 

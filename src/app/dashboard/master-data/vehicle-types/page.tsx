@@ -132,19 +132,7 @@ export default function VehicleTypesPage() {
     setIsEditDialogOpen(true);
   };
 
-  const handleDelete = async (item: VehicleType) => {
-    if (window.confirm(`Are you sure you want to delete ${item.name}?`)) {
-      try {
-        await vehicleTypesAPI.delete(item.documentId);
-        toast.success('Vehicle type deleted successfully');
-        fetchData();
-      } catch (error) {
-        console.error('Failed to delete vehicle type:', error);
-        toast.error('Failed to delete vehicle type');
-      }
-    }
-  };
-
+  
   const handleSave = async () => {
     try {
       const dataToSave = {
@@ -188,7 +176,6 @@ export default function VehicleTypesPage() {
             description="Manage all vehicle types and models"
             onAdd={handleAdd}
             onEdit={handleEdit}
-            onDelete={handleDelete}
             searchPlaceholder="Search vehicle types..."
             addButtonText="Add Vehicle Type"
           />

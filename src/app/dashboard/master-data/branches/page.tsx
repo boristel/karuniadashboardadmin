@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ import {
 import { CRUDTable } from '@/components/CRUDTable';
 import DashboardLayout from '@/components/DashboardLayout';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import GoogleMapsSelector from '@/components/GoogleMapsSelector';
 import { branchesAPI } from '@/services/api';
 import { toast } from 'sonner';
 
@@ -36,7 +37,6 @@ interface Branch {
   whatsapp_number: string | null;
 }
 
-const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 
 export default function BranchesPage() {
   const [data, setData] = useState<Branch[]>([]);
@@ -71,9 +71,6 @@ export default function BranchesPage() {
   useEffect(() => {
     fetchData();
   }, []);
-  const mapRef = useRef<HTMLDivElement>(null);
-  const [map, setMap] = useState<any | null>(null);
-  const [marker, setMarker] = useState<any | null>(null);
 
   const columns: ColumnDef<Branch>[] = [
     {
@@ -125,68 +122,6 @@ export default function BranchesPage() {
     },
   ];
 
-  const initMap = useCallback(() => {
-    if (!mapRef.current || typeof window === 'undefined') return;
-
-    // Ensure Google Maps API is loaded
-    if (!window.google || !window.google.maps) {
-      console.error('Google Maps API not loaded');
-      return;
-    }
-
-    // Use requestAnimationFrame to ensure this runs after React's render cycle
-    requestAnimationFrame(() => {
-      const defaultLocation = { lat: -6.1944, lng: 106.8229 };
-      const mapInstance = new window.google.maps.Map(mapRef.current!, {
-        zoom: 15,
-        center:
-          formData.latitude && formData.longitude
-            ? { lat: formData.latitude, lng: formData.longitude }
-            : defaultLocation,
-        mapTypeControl: true,
-        streetViewControl: true,
-        fullscreenControl: true,
-      });
-
-      const mapMarker = new window.google.maps.Marker({
-        position:
-          formData.latitude && formData.longitude
-            ? { lat: formData.latitude, lng: formData.longitude }
-            : defaultLocation,
-        map: mapInstance,
-        draggable: true,
-      });
-
-      mapMarker.addListener('dragend', (event: any) => {
-        const lat = event.latLng?.lat();
-        const lng = event.latLng?.lng();
-        if (lat && lng) {
-          setFormData((prev) => ({
-            ...prev,
-            latitude: lat,
-            longitude: lng,
-          }));
-        }
-      });
-
-      mapInstance.addListener('click', (event: any) => {
-        const lat = event.latLng?.lat();
-        const lng = event.latLng?.lng();
-        if (lat && lng) {
-          setFormData((prev) => ({
-            ...prev,
-            latitude: lat,
-            longitude: lng,
-          }));
-          mapMarker.setPosition({ lat, lng });
-        }
-      });
-
-      setMap(mapInstance);
-      setMarker(mapMarker);
-    });
-  }, [formData.latitude, formData.longitude]);
-
   const handleAdd = () => {
     setFormData({
       name: '',
@@ -208,19 +143,7 @@ export default function BranchesPage() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (item: Branch) => {
-    if (window.confirm(`Are you sure you want to delete ${item.name}?`)) {
-      try {
-        await branchesAPI.delete(item.documentId);
-        toast.success('Branch deleted successfully');
-        fetchData(); // Refetch data
-      } catch (error) {
-        console.error('Failed to delete branch:', error);
-        toast.error('Failed to delete branch');
-      }
-    }
-  };
-
+  
   const handleSave = async () => {
     try {
       if (editingItem) {
@@ -254,36 +177,6 @@ export default function BranchesPage() {
     }
   };
 
-  const loadGoogleMaps = (callback: () => void) => {
-    if (!GOOGLE_MAPS_API_KEY) {
-      console.error('Google Maps API key is not configured');
-      return;
-    }
-
-    const existingScript = document.getElementById('googleMapsScript');
-    if (!existingScript) {
-      const script = document.createElement('script');
-      script.id = 'googleMapsScript';
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`;
-      script.async = true;
-      script.defer = true;
-      script.onload = callback;
-      script.onerror = () => {
-        console.error('Failed to load Google Maps API');
-      };
-      document.body.appendChild(script);
-    } else {
-      callback();
-    }
-  };
-
-  // Initialize map when dialog opens
-  useEffect(() => {
-    if (isDialogOpen && mapRef.current && !map) {
-      loadGoogleMaps(initMap);
-    }
-  }, [isDialogOpen, map, initMap]);
-
   return (
     <ProtectedRoute>
       <DashboardLayout>
@@ -295,7 +188,6 @@ export default function BranchesPage() {
             description="Manage all branch locations and information"
             onAdd={handleAdd}
             onEdit={handleEdit}
-            onDelete={handleDelete}
             searchPlaceholder="Search branches..."
             addButtonText="Add Branch"
           />
@@ -307,12 +199,10 @@ export default function BranchesPage() {
               if (!open) {
                 setIsDialogOpen(false);
                 setEditingItem(null);
-                setMap(null);
-                setMarker(null);
               }
             }}
           >
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
                   {editingItem ? 'Edit Branch' : 'Add New Branch'}
@@ -402,51 +292,18 @@ export default function BranchesPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Latitude</Label>
-                    <Input
-                      type="number"
-                      step="any"
-                      value={formData.latitude || ''}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          latitude: parseFloat(e.target.value) || 0,
-                        })
-                      }
-                      placeholder="e.g., -6.1944"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Longitude</Label>
-                    <Input
-                      type="number"
-                      step="any"
-                      value={formData.longitude || ''}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          longitude: parseFloat(e.target.value) || 0,
-                        })
-                      }
-                      placeholder="e.g., 106.822.9"
-                    />
-                  </div>
-                </div>
-
                 <div className="space-y-2">
-                  <Label>Location on Map</Label>
-                  <div className="border rounded-lg overflow-hidden">
-                    <div
-                      ref={mapRef}
-                      style={{ width: '100%', height: '400px' }}
-                      className="bg-gray-100"
-                    />
-                  </div>
-                  <p className="text-xs text-gray-500">
-                    Click on the map or drag the marker to set the location
-                  </p>
+                  <Label>Branch Location</Label>
+                  <GoogleMapsSelector
+                    latitude={formData.latitude}
+                    longitude={formData.longitude}
+                    onLocationChange={(lat, lng) =>
+                      setFormData({ ...formData, latitude: lat, longitude: lng })
+                    }
+                    height="500px"
+                    showSearch={true}
+                    disabled={false}
+                  />
                 </div>
 
                 <div className="flex justify-end space-x-2 pt-4">
@@ -455,8 +312,6 @@ export default function BranchesPage() {
                     onClick={() => {
                       setIsDialogOpen(false);
                       setEditingItem(null);
-                      setMap(null);
-                      setMarker(null);
                     }}
                   >
                     Cancel

@@ -19,7 +19,8 @@ import {
   Palette,
   User,
   MapPin,
-  UserCheck
+  UserCheck,
+  Info
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -35,6 +36,7 @@ const navigation = [
       { name: 'Colors', href: '/dashboard/master-data/colors', icon: Palette },
       { name: 'Supervisors', href: '/dashboard/master-data/supervisors', icon: User },
       { name: 'Branches', href: '/dashboard/master-data/branches', icon: MapPin },
+      { name: 'Information', href: '/dashboard/master-data/information', icon: Info },
     ]
   },
   { name: 'User Management', href: '/dashboard/user-management', icon: UserCheck },

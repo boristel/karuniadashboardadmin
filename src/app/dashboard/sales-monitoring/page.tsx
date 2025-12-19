@@ -5,94 +5,55 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import DashboardLayout from '@/components/DashboardLayout';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import { MapPin, Phone, Mail, Activity, Map as MapIcon } from 'lucide-react';
+import { MapPin, Phone, Mail, Activity, Map as MapIcon, RefreshCw, User, Car } from 'lucide-react';
+import { salesMonitoringAPI } from '@/services/api';
+import { toast } from 'sonner';
+import { getOptimalImageUrl } from '@/utils/imageUtils';
 
 interface SalesStaff {
-  id: string;
-  name: string;
+  id: number;
+  documentId: string;
+  sales_uid: string;
   email: string;
-  phone: string;
-  branch: string;
-  status: 'online' | 'offline';
-  lastUpdated: Date;
-  latitude: number;
-  longitude: number;
-  currentLocation?: string;
-  todayVisits: number;
-  monthlyTarget: number;
-  monthlyAchievement: number;
+  surename: string;
+  address: string;
+  city: string;
+  province: string;
+  phonenumber: string;
+  wanumber: string;
+  namasupervisor: string;
+  approved: boolean;
+  blocked: boolean;
+  location?: {
+    latitude: number;
+    longitude: number;
+  };
+  online_stat: boolean | null;
+  photo_profile?: {
+    url: string;
+    formats?: {
+      thumbnail?: {
+        url: string;
+      };
+    };
+  };
+  spks?: Array<{
+    id: number;
+    noSPK: string;
+    namaCustomer: string;
+    finish: boolean;
+  }>;
+  createdAt: string;
+  updatedAt: string;
 }
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
-
-const sampleSalesData: SalesStaff[] = [
-  {
-    id: '1',
-    name: 'Ahmad Wijaya',
-    email: 'ahmad.w@sinarbajamotor.co.id',
-    phone: '0812-3456-7890',
-    branch: 'Jakarta',
-    status: 'online',
-    lastUpdated: new Date(Date.now() - 10 * 60 * 1000), // 10 minutes ago
-    latitude: -6.1944,
-    longitude: 106.8229,
-    currentLocation: 'Grand Indonesia, Jakarta',
-    todayVisits: 8,
-    monthlyTarget: 50,
-    monthlyAchievement: 35,
-  },
-  {
-    id: '2',
-    name: 'Budi Santoso',
-    email: 'budi.s@sinarbajamotor.co.id',
-    phone: '0813-2345-6789',
-    branch: 'Jakarta',
-    status: 'online',
-    lastUpdated: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
-    latitude: -6.2088,
-    longitude: 106.8456,
-    currentLocation: 'Thamrin City, Jakarta',
-    todayVisits: 6,
-    monthlyTarget: 50,
-    monthlyAchievement: 42,
-  },
-  {
-    id: '3',
-    name: 'Siti Nurhaliza',
-    email: 'siti.n@sinarbajamotor.co.id',
-    phone: '0814-3456-7891',
-    branch: 'Surabaya',
-    status: 'offline',
-    lastUpdated: new Date(Date.now() - 45 * 60 * 1000), // 45 minutes ago
-    latitude: -7.2575,
-    longitude: 112.7521,
-    currentLocation: 'Tunjungan Plaza, Surabaya',
-    todayVisits: 5,
-    monthlyTarget: 45,
-    monthlyAchievement: 28,
-  },
-  {
-    id: '4',
-    name: 'Rudi Hermawan',
-    email: 'rudi.h@sinarbajamotor.co.id',
-    phone: '0815-4567-8912',
-    branch: 'Bandung',
-    status: 'online',
-    lastUpdated: new Date(Date.now() - 2 * 60 * 1000), // 2 minutes ago
-    latitude: -6.9175,
-    longitude: 107.6191,
-    currentLocation: 'Paris Van Java, Bandung',
-    todayVisits: 7,
-    monthlyTarget: 48,
-    monthlyAchievement: 38,
-  },
-];
-
 export default function SalesMonitoringPage() {
-  const [salesData, setSalesData] = useState<SalesStaff[]>(sampleSalesData);
+  const [salesData, setSalesData] = useState<SalesStaff[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedBranch, setSelectedBranch] = useState<string>('all');
   const [map, setMap] = useState<any | null>(null);
   const [markers, setMarkers] = useState<any[]>([]);
@@ -100,19 +61,43 @@ export default function SalesMonitoringPage() {
 
   const branches = [
     { value: 'all', label: 'All Branches' },
-    { value: 'Jakarta', label: 'Jakarta' },
-    { value: 'Surabaya', label: 'Surabaya' },
-    { value: 'Bandung', label: 'Bandung' },
+    { value: 'SURABAYA', label: 'Surabaya' },
+    { value: 'JAKARTA', label: 'Jakarta' },
+    { value: 'BANDUNG', label: 'Bandung' },
+    { value: 'BALI', label: 'Bali' },
   ];
 
-  const getMarkerColor = (lastUpdated: Date) => {
-    const minutesDiff = (Date.now() - lastUpdated.getTime()) / (1000 * 60);
-    if (minutesDiff < 30) {
-      return '#10b981'; // Green for recent
-    } else {
-      return '#ef4444'; // Red for old
+  const getMarkerColor = (onlineStat: boolean | null) => {
+    return onlineStat === true ? '#10b981' : '#ef4444'; // Green for online, Red for offline
+  };
+
+  // Fetch sales data from API
+  const fetchSalesData = async () => {
+    try {
+      setLoading(true);
+      const response = await salesMonitoringAPI.getSalesProfilesWithSPK();
+      setSalesData(response.data || []);
+    } catch (error) {
+      console.error('Failed to fetch sales data:', error);
+      toast.error('Failed to load sales data');
+    } finally {
+      setLoading(false);
     }
   };
+
+  // Initialize data on component mount
+  useEffect(() => {
+    fetchSalesData();
+  }, []);
+
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchSalesData();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, []);
 
   const initMap = useCallback(() => {
     if (!mapRef.current || typeof window === 'undefined') return;
@@ -147,35 +132,43 @@ export default function SalesMonitoringPage() {
     const bounds = new (window.google.maps.LatLngBounds as any)();
 
     salesData
-      .filter(sales => selectedBranch === 'all' || sales.branch === selectedBranch)
+      .filter(sales => {
+        // Only show sales with location data
+        if (!sales.location) return false;
+        return selectedBranch === 'all' || sales.city === selectedBranch;
+      })
       .forEach(sales => {
         const marker = new (window.google.maps.Marker as any)({
-          position: { lat: sales.latitude, lng: sales.longitude },
+          position: { lat: sales.location!.latitude, lng: sales.location!.longitude },
           map,
-          title: sales.name,
+          title: sales.surename,
           icon: {
             path: window.google.maps.SymbolPath.CIRCLE,
             scale: 10,
-            fillColor: getMarkerColor(sales.lastUpdated),
+            fillColor: getMarkerColor(sales.online_stat),
             fillOpacity: 1,
             strokeColor: '#ffffff',
             strokeWidth: 2,
           },
         });
 
-        const infoWindow = new (window.google.maps.InfoWindow as any)({
-          content: `
-            <div style="padding: 10px; min-width: 200px;">
-              <h3 style="margin: 0 0 10px 0; font-weight: bold;">${sales.name}</h3>
-              <p style="margin: 5px 0;">📍 ${sales.currentLocation || 'Unknown location'}</p>
-              <p style="margin: 5px 0;">📱 ${sales.phone}</p>
-              <p style="margin: 5px 0;">📊 Today's visits: ${sales.todayVisits}</p>
-              <p style="margin: 5px 0;">🏢 Branch: ${sales.branch}</p>
-              <p style="margin: 5px 0; color: ${sales.status === 'online' ? '#10b981' : '#ef4444'};">
-                ● ${sales.status.toUpperCase()} (${Math.floor((Date.now() - sales.lastUpdated.getTime()) / (1000 * 60))} min ago)
+        // Create info window content with photo, name, and WhatsApp
+        const photoUrl = getOptimalImageUrl(sales.photo_profile);
+        const infoContent = `
+          <div style="padding: 10px; min-width: 200px; display: flex; align-items: center; gap: 10px;">
+            ${photoUrl ? `<img src="${photoUrl}" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;" />` : '<div style="width: 50px; height: 50px; border-radius: 50%; background-color: #e5e7eb; display: flex; align-items: center; justify-content: center;"><span style="font-weight: bold; color: #6b7280;">${sales.surename.charAt(0)}</span></div>'}
+            <div>
+              <h3 style="margin: 0 0 5px 0; font-weight: bold; font-size: 14px;">${sales.surename}</h3>
+              <p style="margin: 2px 0; font-size: 12px; color: #6b7280;">📱 ${sales.wanumber || 'No WhatsApp'}</p>
+              <p style="margin: 2px 0; font-size: 12px; color: ${sales.online_stat === true ? '#10b981' : '#ef4444'}; font-weight: bold;">
+                ● ${sales.online_stat === true ? 'ONLINE' : 'OFFLINE'}
               </p>
             </div>
-          `,
+          </div>
+        `;
+
+        const infoWindow = new (window.google.maps.InfoWindow as any)({
+          content: infoContent,
         });
 
         marker.addListener('click', () => {
@@ -183,7 +176,7 @@ export default function SalesMonitoringPage() {
         });
 
         newMarkers.push(marker);
-        bounds.extend({ lat: sales.latitude, lng: sales.longitude });
+        bounds.extend({ lat: sales.location!.latitude, lng: sales.location!.longitude });
       });
 
     setMarkers(newMarkers);
@@ -230,11 +223,12 @@ export default function SalesMonitoringPage() {
   }, [loadGoogleMaps]);
 
   const filteredSalesData = salesData.filter(sales =>
-    selectedBranch === 'all' || sales.branch === selectedBranch
+    selectedBranch === 'all' || sales.city === selectedBranch
   );
 
-  const onlineCount = filteredSalesData.filter(s => s.status === 'online').length;
+  const onlineCount = filteredSalesData.filter(s => s.online_stat === true).length;
   const totalCount = filteredSalesData.length;
+  const totalSPKs = filteredSalesData.reduce((acc, s) => acc + (s.spks?.length || 0), 0);
 
   return (
     <ProtectedRoute>
@@ -246,18 +240,30 @@ export default function SalesMonitoringPage() {
               <h1 className="text-3xl font-bold text-gray-900">Sales Monitoring</h1>
               <p className="text-gray-600">Live tracking of sales staff locations and activities</p>
             </div>
-            <Select value={selectedBranch} onValueChange={setSelectedBranch}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Select branch" />
-              </SelectTrigger>
-              <SelectContent>
-                {branches.map((branch) => (
-                  <SelectItem key={branch.value} value={branch.value}>
-                    {branch.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex gap-3 items-center">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fetchSalesData()}
+                disabled={loading}
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+              <Select value={selectedBranch} onValueChange={setSelectedBranch}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Select branch" />
+                </SelectTrigger>
+                <SelectContent>
+                  {branches.map((branch) => (
+                    <SelectItem key={branch.value} value={branch.value}>
+                      {branch.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Stats Cards */}
@@ -265,12 +271,12 @@ export default function SalesMonitoringPage() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
-                <Activity className="h-4 w-4 text-muted-foreground" />
+                <User className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{totalCount}</div>
                 <p className="text-xs text-muted-foreground">
-                  Across all branches
+                  {selectedBranch === 'all' ? 'Across all branches' : `In ${selectedBranch}`}
                 </p>
               </CardContent>
             </Card>
@@ -288,31 +294,27 @@ export default function SalesMonitoringPage() {
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Today's Visits</CardTitle>
-                <MapPin className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Total SPKs</CardTitle>
+                <Car className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  {filteredSalesData.reduce((acc, s) => acc + s.todayVisits, 0)}
-                </div>
+                <div className="text-2xl font-bold">{totalSPKs}</div>
                 <p className="text-xs text-muted-foreground">
-                  Total customer visits
+                  Sales orders
                 </p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Monthly Target</CardTitle>
-                <Activity className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">With Location</CardTitle>
+                <MapPin className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {Math.round(
-                    (filteredSalesData.reduce((acc, s) => acc + (s.monthlyAchievement / s.monthlyTarget) * 100, 0) / totalCount)
-                  )}%
+                  {filteredSalesData.filter(s => s.location).length}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Average achievement
+                  Trackable sales
                 </p>
               </CardContent>
             </Card>
@@ -328,9 +330,9 @@ export default function SalesMonitoringPage() {
                   Real-time location of sales staff.
                   <span className="inline-flex items-center gap-1 ml-2">
                     <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                    Recent (&lt;30 min)
+                    Online
                     <span className="w-2 h-2 bg-red-500 rounded-full ml-2"></span>
-                    Old (&gt;30 min)
+                    Offline
                   </span>
                 </CardDescription>
               </CardHeader>
@@ -353,45 +355,56 @@ export default function SalesMonitoringPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4 max-h-[500px] overflow-y-auto">
-                  {filteredSalesData.map((sales) => (
-                    <div
-                      key={sales.id}
-                      className="flex items-center space-x-4 p-3 border rounded-lg hover:bg-gray-50"
-                    >
-                      <Avatar>
-                        <AvatarFallback>{sales.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium truncate">{sales.name}</p>
-                          <Badge
-                            variant={sales.status === 'online' ? 'default' : 'secondary'}
-                            className="text-xs"
-                          >
-                            {sales.status}
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-gray-500 flex items-center gap-1">
-                          <MapPin className="w-3 h-3" />
-                          {sales.currentLocation || 'Unknown location'}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {sales.branch} • {sales.todayVisits} visits today
-                        </p>
-                      </div>
-                      <div className="flex flex-col items-end space-y-1">
-                        <span className="text-xs text-gray-500">
-                          {Math.floor((Date.now() - sales.lastUpdated.getTime()) / (1000 * 60))}m ago
-                        </span>
-                        <div className="flex items-center space-x-1">
-                          <div
-                            className="w-2 h-2 rounded-full"
-                            style={{ backgroundColor: getMarkerColor(sales.lastUpdated) }}
-                          ></div>
-                        </div>
-                      </div>
+                  {loading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                     </div>
-                  ))}
+                  ) : filteredSalesData.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      No sales staff found
+                    </div>
+                  ) : (
+                    filteredSalesData.map((sales) => (
+                      <div
+                        key={sales.id}
+                        className="flex items-center space-x-4 p-3 border rounded-lg hover:bg-gray-50"
+                      >
+                        <Avatar>
+                          <AvatarImage src={getOptimalImageUrl(sales.photo_profile)} />
+                          <AvatarFallback>{sales.surename.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium truncate">{sales.surename}</p>
+                            <Badge
+                              variant={sales.online_stat === true ? 'default' : 'secondary'}
+                              className="text-xs"
+                            >
+                              {sales.online_stat === true ? 'online' : 'offline'}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-gray-500 flex items-center gap-1">
+                            <MapPin className="w-3 h-3" />
+                            {sales.city || 'Unknown city'}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            📱 {sales.wanumber || 'No WhatsApp'} • {sales.spks?.length || 0} SPKs
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-end space-y-1">
+                          <div className="flex items-center space-x-1">
+                            <div
+                              className="w-2 h-2 rounded-full"
+                              style={{ backgroundColor: getMarkerColor(sales.online_stat) }}
+                            ></div>
+                          </div>
+                          {!sales.location && (
+                            <span className="text-xs text-gray-400">No location</span>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>

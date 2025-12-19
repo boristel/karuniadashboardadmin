@@ -144,19 +144,7 @@ export default function VehicleGroupsPage() {
     setIsEditDialogOpen(true);
   };
 
-  const handleDelete = async (item: VehicleGroup) => {
-    if (window.confirm(`Are you sure you want to delete ${item.name} group?`)) {
-      try {
-        await vehicleGroupsAPI.delete(item.documentId);
-        toast.success('Vehicle group deleted successfully');
-        fetchData(); // Refetch data
-      } catch (error) {
-        console.error('Failed to delete vehicle group:', error);
-        toast.error('Failed to delete vehicle group');
-      }
-    }
-  };
-
+  
   const handleSave = async () => {
     try {
       if (editingItem) {
@@ -195,7 +183,6 @@ export default function VehicleGroupsPage() {
             description="Manage vehicle categories and groups"
             onAdd={handleAdd}
             onEdit={handleEdit}
-            onDelete={handleDelete}
             searchPlaceholder="Search vehicle groups..."
             addButtonText="Add Vehicle Group"
           />

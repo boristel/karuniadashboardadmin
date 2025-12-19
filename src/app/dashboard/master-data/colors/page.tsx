@@ -111,20 +111,7 @@ export default function ColorsPage() {
     setIsEditDialogOpen(true);
   };
 
-  const handleDelete = async (item: Color) => {
-    console.log('🗑️ [Colors] handleDelete called with item:', item);
-    if (window.confirm(`Are you sure you want to delete ${item.colorname}?`)) {
-      try {
-        await colorsAPI.delete(item.documentId);
-        toast.success('Color deleted successfully');
-        fetchData(); // Refetch data
-      } catch (error) {
-        console.error('Failed to delete color:', error);
-        toast.error('Failed to delete color');
-      }
-    }
-  };
-
+  
   const handleSave = async () => {
     console.log('💾 [Colors] handleSave called with formData:', formData);
     try {
@@ -162,7 +149,6 @@ export default function ColorsPage() {
             description="Manage available vehicle colors"
             onAdd={handleAdd}
             onEdit={handleEdit}
-            onDelete={handleDelete}
             searchPlaceholder="Search colors..."
             addButtonText="Add Color"
           />

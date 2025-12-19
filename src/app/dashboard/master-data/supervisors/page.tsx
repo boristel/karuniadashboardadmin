@@ -109,19 +109,7 @@ export default function SupervisorsPage() {
     setIsEditDialogOpen(true);
   };
 
-  const handleDelete = async (item: Supervisor) => {
-    if (window.confirm(`Are you sure you want to delete ${item.namasupervisor}?`)) {
-      try {
-        await supervisorsAPI.delete(item.documentId);
-        toast.success('Supervisor deleted successfully');
-        fetchData(); // Refetch data
-      } catch (error) {
-        console.error('Failed to delete supervisor:', error);
-        toast.error('Failed to delete supervisor');
-      }
-    }
-  };
-
+  
   const handleSave = async () => {
     try {
       if (editingItem) {
@@ -160,7 +148,6 @@ export default function SupervisorsPage() {
             description="Manage sales supervisors"
             onAdd={handleAdd}
             onEdit={handleEdit}
-            onDelete={handleDelete}
             searchPlaceholder="Search supervisors..."
             addButtonText="Add Supervisor"
           />
