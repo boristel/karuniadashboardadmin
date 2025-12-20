@@ -4,6 +4,7 @@ node_modules
 # Markdown files (keeping only README.md)
 *.md
 !README.md
+!DEPLOY_COOLIFY.md
 
 # PDF files
 **/*.pdf
