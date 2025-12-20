@@ -1,44 +1,10 @@
 import React from 'react';
 import { pdf } from '@react-pdf/renderer';
-import SpkDocument from '@/components/SpkDocument';
+import SpkDocument, { SpkDocumentData } from '@/components/SpkDocument';
 import { saveAs } from 'file-saver';
 
-export interface SpkData {
-  spkNumber: string;
-  date: string;
-  customer: {
-    nama: string;
-    alamat: string;
-    noHp: string;
-    email: string;
-    ktp: string;
-  };
-  sales: {
-    nama: string;
-    noHp: string;
-    email: string;
-  };
-  vehicle: {
-    type: string;
-    warna: string;
-    noRangka: string;
-    noMesin: string;
-    tahun: string;
-    harga: string;
-  };
-  payment: {
-    type: 'cash' | 'credit';
-    dp: string;
-    tenor?: string;
-    angsuran?: string;
-    bunga?: string;
-  };
-  signatures: {
-    spv: string;
-    sales: string;
-    customer: string;
-  };
-}
+// Re-export the type for consistency
+export type SpkData = SpkDocumentData;
 
 export const generateSpkPdf = async (data: SpkData, filename?: string) => {
   try {
@@ -74,35 +40,43 @@ export const sampleSpkData: SpkData = {
   spkNumber: 'SPK/001/SBM/XII/2025',
   date: '13 Desember 2025',
   customer: {
-    nama: 'Ahmad Wijaya',
-    alamat: 'Jl. Merdeka No. 123, Kelurahan Cikarang Selatan, Bekasi, Jawa Barat 17550',
-    noHp: '0812-3456-7890',
+    namaLengkap: 'Ahmad Wijaya',
+    alamat: 'Jl. Merdeka No. 123',
+    kecamatan: 'Cikarang Selatan',
+    kotaKabupaten: 'Bekasi',
+    kodePos: '17550',
+    noTelepon: '0812-3456-7890',
+    noTeleponAlt: '-',
     email: 'ahmad.wijaya@email.com',
-    ktp: '3275031212850001'
-  },
-  sales: {
-    nama: 'Budi Santoso',
-    noHp: '0813-2345-6789',
-    email: 'budi.santoso@sinarbajamotor.co.id'
+    noKtp: '3275031212850001',
+    npwp: '-',
+    pembayaran: 'KREDIT',
+    jenisPerusahaan: 'Perorangan',
+    namaPerusahaan: '-',
+    alamatPerusahaan: '-',
+    npwpPerusahaan: '-'
   },
   vehicle: {
-    type: 'Honda Beat FI CBS',
-    warna: 'Hitam',
-    noRangka: 'MH1JFC115JK000001',
+    tipeKendaraan: 'Honda Beat FI CBS',
+    tahunPembuatan: '2025',
+    warnaKendaraan: 'Hitam',
+    warnaInterior: 'Hitam',
     noMesin: 'JFC1E-1500001',
-    tahun: '2024',
-    harga: 'Rp 17.500.000'
+    noRangka: 'MH1JFC115JK000001',
+    hargaSatuan: '17500000',
+    aksesoris: [],
+    totalHarga: '17500000',
+    uangMuka: '5000000',
+    sisaPembayaran: '12500000',
+    alamatKirim: 'Jl. Merdeka No. 123',
+    jangkaWaktuPengiriman: 'Segera',
+    namaPenerima: 'Ahmad Wijaya'
   },
-  payment: {
-    type: 'credit',
-    dp: 'Rp 5.000.000',
-    tenor: '35 Bulan',
-    angsuran: 'Rp 650.000',
-    bunga: '10%'
+  sales: {
+    nama: 'Budi Santoso'
   },
   signatures: {
-    spv: 'Drs. H. Joko Widodo',
-    sales: 'Budi Santoso',
-    customer: 'Ahmad Wijaya'
+    customer: 'Ahmad Wijaya',
+    cabang: 'Jakarta'
   }
 };

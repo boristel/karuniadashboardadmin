@@ -45,7 +45,7 @@ export const GoogleMapsLoader = {
         const checkApi = setInterval(() => {
           if (window.google && window.google.maps) {
             clearInterval(checkApi);
-            this.onApiLoaded();
+            GoogleMapsLoader.onApiLoaded();
             resolve();
           }
         }, 100);

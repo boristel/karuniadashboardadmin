@@ -221,7 +221,7 @@ export default function SpkManagementPage() {
       vehicle: {
         tipeKendaraan: (spk.unitInfo && spk.unitInfo.vehicleType && spk.unitInfo.vehicleType.name) ? spk.unitInfo.vehicleType.name : '-',
         tahunPembuatan: (spk.unitInfo && spk.unitInfo.tahun) ? spk.unitInfo.tahun : new Date().getFullYear().toString(),
-        warnaKendaraan: (spk.unitInfo && spk.unitInfo.color && spk.unitInfo.color.name) ? spk.unitInfo.color.name : '-',
+        warnaKendaraan: (spk.unitInfo && spk.unitInfo.color && spk.unitInfo.color.colorname) ? spk.unitInfo.color.colorname : '-',
         warnaInterior: 'ABU-ABU', // Default value
         noMesin: (spk.unitInfo && spk.unitInfo.noMesin) ? spk.unitInfo.noMesin : 'Dilihat pada unit',
         noRangka: (spk.unitInfo && spk.unitInfo.noRangka) ? spk.unitInfo.noRangka : 'Dilihat pada unit',
@@ -316,8 +316,8 @@ export default function SpkManagementPage() {
       field: 'tanggal',
       headerName: 'Tanggal',
       width: 120,
-      valueFormatter: (params) => {
-        const date = new Date(params.value as string);
+      valueFormatter: (value) => {
+        const date = new Date(value as string);
         return date.toLocaleDateString('id-ID');
       },
     },

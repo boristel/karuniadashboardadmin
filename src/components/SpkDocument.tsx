@@ -11,54 +11,56 @@ import {
 // Use standard fonts that are available in most systems
 // Logo will be handled dynamically to avoid import issues
 
-interface SpkDocumentProps {
-  data: {
-    spkNumber: string;
-    date: string;
-    customer: {
-      namaLengkap: string;
-      alamat: string;
-      kecamatan: string;
-      kotaKabupaten: string;
-      kodePos: string;
-      noTelepon: string;
-      noTeleponAlt: string;
-      email: string;
-      noKtp: string;
-      npwp: string;
-      pembayaran: string;
-      jenisPerusahaan: string;
-      namaPerusahaan: string;
-      alamatPerusahaan: string;
-      npwpPerusahaan: string;
-    };
-    vehicle: {
-      tipeKendaraan: string;
-      tahunPembuatan: string;
-      warnaKendaraan: string;
-      warnaInterior: string;
-      noMesin: string;
-      noRangka: string;
-      hargaSatuan: string;
-      aksesoris: Array<{
-        nama: string;
-        harga: string;
-      }>;
-      totalHarga: string;
-      uangMuka: string;
-      sisaPembayaran: string;
-      alamatKirim: string;
-      jangkaWaktuPengiriman: string;
-      namaPenerima: string;
-    };
-    sales: {
-      nama: string;
-    };
-    signatures: {
-      customer: string;
-      cabang: string;
-    };
+export interface SpkDocumentData {
+  spkNumber: string;
+  date: string;
+  customer: {
+    namaLengkap: string;
+    alamat: string;
+    kecamatan: string;
+    kotaKabupaten: string;
+    kodePos: string;
+    noTelepon: string;
+    noTeleponAlt: string;
+    email: string;
+    noKtp: string;
+    npwp: string;
+    pembayaran: string;
+    jenisPerusahaan: string;
+    namaPerusahaan: string;
+    alamatPerusahaan: string;
+    npwpPerusahaan: string;
   };
+  vehicle: {
+    tipeKendaraan: string;
+    tahunPembuatan: string;
+    warnaKendaraan: string;
+    warnaInterior: string;
+    noMesin: string;
+    noRangka: string;
+    hargaSatuan: string;
+    aksesoris: Array<{
+      nama: string;
+      harga: string;
+    }>;
+    totalHarga: string;
+    uangMuka: string;
+    sisaPembayaran: string;
+    alamatKirim: string;
+    jangkaWaktuPengiriman: string;
+    namaPenerima: string;
+  };
+  sales: {
+    nama: string;
+  };
+  signatures: {
+    customer: string;
+    cabang: string;
+  };
+}
+
+export interface SpkDocumentProps {
+  data: SpkDocumentData;
 }
 
 const styles = StyleSheet.create({
@@ -419,13 +421,13 @@ const SpkDocument: React.FC<SpkDocumentProps> = ({ data }) => {
               </View>
               <View style={styles.tableCell}>
                 <Text>Accesories</Text>
-            </View>
+              </View>
               <View style={[styles.tableCell, { flex: 2 }]}>
                 <Text>{item.nama}</Text>
               </View>
               <View style={styles.tableCell}>
                 <Text>1 Unit</Text>
-            </View>
+              </View>
               <View style={styles.tableCellPriceLast}>
                 <Text>{formatCurrency(item.harga)}</Text>
               </View>
@@ -434,7 +436,7 @@ const SpkDocument: React.FC<SpkDocumentProps> = ({ data }) => {
 
           {/* Total */}
           <View style={[styles.tableRow, styles.tableRowTotal]}>
-            <View style={[styles.tableCell, styles.tableCellLast]} colSpan={4}>
+            <View style={[styles.tableCell, styles.tableCellLast, { flex: 5.5 }]}>
               <Text style={{ textAlign: 'right', paddingRight: 10 }}>TOTAL HARGA</Text>
             </View>
             <View style={[styles.tableCellPriceLast, { fontWeight: 'bold' }]}>
