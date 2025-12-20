@@ -29,7 +29,7 @@ Coolify will analyze the repository. **You must change the configuration to use 
 *   **Build Pack**: Select **Docker / Dockerfile** (NOT Nixpacks).
     *   Coolify should automatically detect the `Dockerfile` in the root.
 *   **Docker File Location**: `/Dockerfile` (Default).
-*   **Port Exposes**: `80` (This matches the EXPOSE 80 in our Dockerfile).
+*   **Port Exposes**: `3000` (Matches standard Next.js port).
 
 ### Step 3: Environment Variables
 1.  Navigate to **Environment Variables**.
