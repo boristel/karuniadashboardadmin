@@ -8,6 +8,7 @@ build
 *.md
 !README.md
 !DEPLOY_COOLIFY.md
+!APPLICATION_DOCUMENTATION.md
 
 # PDF files
 **/*.pdf
