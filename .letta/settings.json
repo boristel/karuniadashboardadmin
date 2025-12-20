@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir \"D:\\BEN\\KMR\\_New Source\\WEBAPPS\\frontend\\dashboard\")",
+      "Bash(dir \"D:\\BEN\\KMR\\_New Source\\WEBAPPS\\frontend\\dashboard\\src\" /S /B)",
+      "Bash(cd \"D:\\BEN\\KMR\\_New Source\\WEBAPPS\\frontend\\dashboard\" && git remote -v)",
+      "Edit(src\\contexts/**)"
+    ]
+  }
+}

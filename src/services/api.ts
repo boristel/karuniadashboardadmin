@@ -378,6 +378,103 @@ export const salesStaffAPI = createCRUDAPI('sales-staffs');
 // Sales Profile API
 export const salesProfilesAPI = createCRUDAPI('sales-profiles');
 
+// Dashboard API
+export const dashboardAPI = {
+  // Get dashboard statistics
+  getStatistics: async () => {
+    const promises = [
+      // Get all SPKs
+      api.get('/spks?sort=createdAt:desc&pagination[limit]=100'),
+      // Get all sales profiles
+      api.get('/sales-profiles?pagination[limit]=100'),
+      // Get recent articles
+      api.get('/articles?sort=createdAt:desc&pagination[limit]=5'),
+    ];
+
+    try {
+      const [spksResponse, salesResponse, articlesResponse] = await Promise.all(promises);
+
+      const spks = spksResponse.data?.data || [];
+      const sales = salesResponse.data?.data || [];
+      const articles = articlesResponse.data?.data || [];
+
+      // Calculate statistics
+      const stats = {
+        totalSpks: spks.length,
+        finishedSpks: spks.filter(s => s.finish).length,
+        pendingSpks: spks.filter(s => !s.finish).length,
+        activeSales: sales.filter(s => s.online_stat).length,
+        totalSales: sales.length,
+        totalSalesApproved: sales.filter(s => s.approved).length,
+        // Calculate this month's SPKs
+        thisMonthSpks: spks.filter(s => {
+          const spkDate = new Date(s.tanggal);
+          const now = new Date();
+          return spkDate.getMonth() === now.getMonth() &&
+                 spkDate.getFullYear() === now.getFullYear();
+        }).length,
+        // Calculate total sales value
+        totalSalesValue: spks.reduce((total, spk) => {
+          const price = spk.unitInfo?.hargaOtr || 0;
+          return total + price;
+        }, 0),
+      };
+
+      // Recent activities
+      const recentSpks = spks.slice(0, 5);
+      const recentArticles = articles.slice(0, 3);
+
+      return {
+        stats,
+        recentSpks,
+        recentArticles,
+        topSales: sales.filter(s => s.approved && !s.blocked).slice(0, 5),
+      };
+    } catch (error) {
+      console.error('Failed to fetch dashboard data:', error);
+      throw error;
+    }
+  },
+
+  // Get sales by city
+  getSalesByCity: async () => {
+    try {
+      const response = await api.get('/sales-profiles?pagination[limit]=100');
+      const sales = response.data?.data || [];
+
+      const cityCount = sales.reduce((acc: any, sale) => {
+        const city = sale.city || 'Unknown';
+        acc[city] = (acc[city] || 0) + 1;
+        return acc;
+      }, {});
+
+      return cityCount;
+    } catch (error) {
+      console.error('Failed to fetch sales by city:', error);
+      throw error;
+    }
+  },
+
+  // Get vehicle type statistics
+  getVehicleStats: async () => {
+    try {
+      const response = await api.get('/spks?populate=unitInfo.vehicleType&pagination[limit]=100');
+      const spks = response.data?.data || [];
+
+      const vehicleCount = spks.reduce((acc: any, spk) => {
+        const vehicleType = spk.unitInfo?.vehicleType?.name || 'Unknown';
+        acc[vehicleType] = (acc[vehicleType] || 0) + 1;
+        return acc;
+      }, {});
+
+      return vehicleCount;
+    } catch (error) {
+      console.error('Failed to fetch vehicle statistics:', error);
+      throw error;
+    }
+  },
+};
+
 // Information/Articles API
 export const articlesAPI = createCRUDAPI('articles');
 
