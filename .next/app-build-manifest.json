@@ -26,15 +26,10 @@
       "static/chunks/main-app.js",
       "static/chunks/app/dashboard/sales-monitoring/page.js"
     ],
-    "/dashboard/spk-management/page": [
+    "/_not-found/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/dashboard/spk-management/page.js"
-    ],
-    "/dashboard/master-data/vehicle-groups/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/dashboard/master-data/vehicle-groups/page.js"
+      "static/chunks/app/_not-found/page.js"
     ]
   }
 }

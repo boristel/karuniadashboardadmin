@@ -281,6 +281,9 @@ body{
 .ml-2{
     margin-left: 0.5rem;
 }
+.ml-3{
+    margin-left: 0.75rem;
+}
 .ml-4{
     margin-left: 1rem;
 }
@@ -304,9 +307,6 @@ body{
 }
 .mt-8{
     margin-top: 2rem;
-}
-.ml-3{
-    margin-left: 0.75rem;
 }
 .line-clamp-2{
     overflow: hidden;
@@ -394,6 +394,9 @@ body{
 .h-6{
     height: 1.5rem;
 }
+.h-64{
+    height: 16rem;
+}
 .h-8{
     height: 2rem;
 }
@@ -417,9 +420,6 @@ body{
 }
 .h-screen{
     height: 100vh;
-}
-.h-64{
-    height: 16rem;
 }
 .max-h-\[--radix-select-content-available-height\]{
     max-height: var(--radix-select-content-available-height);
@@ -765,11 +765,11 @@ body{
 .border-b-2{
     border-bottom-width: 2px;
 }
-.border-t{
-    border-top-width: 1px;
-}
 .border-l{
     border-left-width: 1px;
+}
+.border-t{
+    border-top-width: 1px;
 }
 .border-dashed{
     border-style: dashed;
@@ -783,6 +783,14 @@ body{
 .border-gray-300{
     --tw-border-opacity: 1;
     border-color: rgb(209 213 219 / var(--tw-border-opacity, 1));
+}
+.border-gray-600{
+    --tw-border-opacity: 1;
+    border-color: rgb(75 85 99 / var(--tw-border-opacity, 1));
+}
+.border-gray-700{
+    --tw-border-opacity: 1;
+    border-color: rgb(55 65 81 / var(--tw-border-opacity, 1));
 }
 .border-green-300{
     --tw-border-opacity: 1;
@@ -804,14 +812,6 @@ body{
 }
 .border-transparent{
     border-color: transparent;
-}
-.border-gray-700{
-    --tw-border-opacity: 1;
-    border-color: rgb(55 65 81 / var(--tw-border-opacity, 1));
-}
-.border-gray-600{
-    --tw-border-opacity: 1;
-    border-color: rgb(75 85 99 / var(--tw-border-opacity, 1));
 }
 .bg-accent{
     background-color: hsl(var(--accent));
@@ -952,6 +952,10 @@ body{
     padding-left: 1rem;
     padding-right: 1rem;
 }
+.px-6{
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+}
 .px-8{
     padding-left: 2rem;
     padding-right: 2rem;
@@ -996,18 +1000,20 @@ body{
     padding-top: 2rem;
     padding-bottom: 2rem;
 }
-.px-6{
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
-}
 .pb-2{
     padding-bottom: 0.5rem;
+}
+.pb-3{
+    padding-bottom: 0.75rem;
 }
 .pl-10{
     padding-left: 2.5rem;
 }
 .pl-2{
     padding-left: 0.5rem;
+}
+.pl-3{
+    padding-left: 0.75rem;
 }
 .pl-8{
     padding-left: 2rem;
@@ -1026,12 +1032,6 @@ body{
 }
 .pt-4{
     padding-top: 1rem;
-}
-.pl-3{
-    padding-left: 0.75rem;
-}
-.pb-3{
-    padding-bottom: 0.75rem;
 }
 .text-left{
     text-align: left;
@@ -1097,11 +1097,11 @@ body{
 .tracking-tight{
     letter-spacing: -0.025em;
 }
-.tracking-widest{
-    letter-spacing: 0.1em;
-}
 .tracking-wide{
     letter-spacing: 0.025em;
+}
+.tracking-widest{
+    letter-spacing: 0.1em;
 }
 .text-accent-foreground{
     color: hsl(var(--accent-foreground));

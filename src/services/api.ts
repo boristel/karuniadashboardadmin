@@ -1,8 +1,8 @@
 import axios from 'axios';
 
 // Get API base URL from environment
-const API_BASE_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'http://localhost:1337/api';
-const STRAPI_BASE_URL = process.env.NEXT_PUBLIC_STRAPI_URL?.replace('/api', '') || 'http://localhost:1337';
+const API_BASE_URL = process.env.NEXT_PUBLIC_STRAPI_URL || '';
+const STRAPI_BASE_URL = process.env.NEXT_PUBLIC_STRAPI_URL?.replace('/api', '') || '';
 const API_TOKEN = process.env.STRAPI_API_TOKEN;
 
 // Create axios instance

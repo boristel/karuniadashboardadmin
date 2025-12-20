@@ -1,5 +1,5 @@
 // Get Strapi base URL from environment
-const STRAPI_BASE_URL = process.env.NEXT_PUBLIC_STRAPI_URL?.replace('/api', '') || 'http://localhost:1337';
+const STRAPI_BASE_URL = process.env.NEXT_PUBLIC_STRAPI_URL?.replace('/api', '') || '';
 
 /**
  * Converts a relative URL to an absolute URL
