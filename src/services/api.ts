@@ -53,6 +53,12 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      console.warn('⚠️ API Interceptor: 401 Unauthorized detected', {
+        url: error.config?.url,
+        method: error.config?.method,
+        status: error.response?.status,
+        data: error.response?.data
+      });
       // Unauthorized - clear token and redirect to login
       localStorage.removeItem('jwt_token');
       localStorage.removeItem('user');

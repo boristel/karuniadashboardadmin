@@ -64,17 +64,18 @@ export default function DashboardPage() {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
+        console.log('📊 Dashboard: Fetching data...');
+
+        // Safety timeout
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Request timed out')), 15000);
+        });
+
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
         const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
 
-        const [
-          vehiclesRes,
-          salesRes,
-          branchesRes,
-          spkMonthRes,
-          recentSpkRes
-        ] = await Promise.all([
+        const dataPromise = Promise.all([
           vehicleTypesAPI.getAll({ 'pagination[pageSize]': 1 }),
           salesMonitoringAPI.getSalesProfilesByStatus(true),
           branchesAPI.getAll({ 'pagination[pageSize]': 1 }),
@@ -94,18 +95,28 @@ export default function DashboardPage() {
           })
         ]);
 
+        const [
+          vehiclesRes,
+          salesRes,
+          branchesRes,
+          spkMonthRes,
+          recentSpkRes
+        ] = await Promise.race([dataPromise, timeoutPromise]) as any[];
+
+        console.log('📊 Dashboard: Data fetched successfully');
+
         setStats({
           totalVehicles: vehiclesRes.meta?.pagination?.total || 0,
-          activeSales: salesRes.data?.length || 0, // Assuming this returns array of active profiles
+          activeSales: salesRes.data?.length || 0,
           totalBranches: branchesRes.meta?.pagination?.total || 0,
           spkThisMonth: spkMonthRes.meta?.pagination?.total || 0,
         });
 
-        // Use recent SPKs as activity
         setRecentActivity(recentSpkRes.data || []);
 
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
+        toast.error('Failed to load dashboard data. Please refresh.');
       } finally {
         setLoading(false);
       }
