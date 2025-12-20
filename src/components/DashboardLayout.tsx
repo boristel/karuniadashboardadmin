@@ -160,6 +160,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
           {children}
         </main>
+
+        {/* Footer */}
+        <footer className="bg-white border-t p-2">
+          <div className="flex items-center justify-center">
+            <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white py-2 px-6 rounded-md shadow-md border border-gray-700">
+              <span className="font-bold text-sm tracking-wide">Karunia Apps @nababancloud.net 2025</span>
+              <span className="text-xs text-gray-400 uppercase tracking-widest font-semibold ml-3 pl-3 border-l border-gray-600">Trial Version 1.0.1</span>
+            </div>
+          </div>
+        </footer>
       </div>
 
       {/* Sidebar overlay for mobile */}

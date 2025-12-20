@@ -36,6 +36,9 @@ interface SalesStaff {
   photo_profile?: {
     url: string;
     formats?: {
+      small?: {
+        url: string;
+      };
       thumbnail?: {
         url: string;
       };
@@ -197,7 +200,7 @@ export default function SalesMonitoringPage() {
 
         const infoContent = `
           <div style="padding: 10px; min-width: 200px; display: flex; align-items: center; gap: 10px;">
-            ${photoUrl ? `<img src="http://localhost:1337${photoUrl}" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;" />` : '<div style="width: 50px; height: 50px; border-radius: 50%; background-color: #e5e7eb; display: flex; align-items: center; justify-content: center;"><span style="font-weight: bold; color: #6b7280;">${sales.surename.charAt(0)}</span></div>'}
+            ${photoUrl ? `<img src="${process.env.NEXT_PUBLIC_STRAPI_URL?.replace('/api', '') || 'http://localhost:1337'}${photoUrl}" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;" />` : '<div style="width: 50px; height: 50px; border-radius: 50%; background-color: #e5e7eb; display: flex; align-items: center; justify-content: center;"><span style="font-weight: bold; color: #6b7280;">${sales.surename.charAt(0)}</span></div>'}
             <div>
               <h3 style="margin: 0 0 5px 0; font-weight: bold; font-size: 14px;">${sales.surename}</h3>
               <p style="margin: 2px 0; font-size: 12px; color: #6b7280;">📱 ${sales.wanumber || 'No WhatsApp'}</p>

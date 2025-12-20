@@ -46,10 +46,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (token && storedUser) {
           // Verify token is still valid
           const userData = await authAPI.me();
-          
+
           // ⭐ ROLE-BASED ACCESS CONTROL CHECK
           console.log('🔐 checkAuth: Verifying role_custom for existing session:', userData?.role_custom);
-          
+
           if (!userData.role_custom || userData.role_custom !== 'ADMIN') {
             console.log('❌ checkAuth: User is not ADMIN - clearing session');
             console.log('❌ checkAuth: role_custom value:', userData.role_custom || 'undefined');
@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             throw new Error('Access denied. Your session has been terminated.');
           }
-          
+
           console.log('✅ checkAuth: ADMIN role verified');
           setUser(userData);
         }
@@ -129,7 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // ⭐ ROLE-BASED ACCESS CONTROL CHECK
       console.log('🔐 Checking role_custom field:', user?.role_custom);
-      
+
       if (!user.role_custom || user.role_custom !== 'ADMIN') {
         console.log('❌ ACCESS DENIED: User role is not ADMIN');
         console.log('❌ User role_custom value:', user.role_custom || 'undefined');
@@ -143,7 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         throw new Error('Access denied. Only administrators can access this dashboard. Please contact your system administrator.');
       }
-      
+
       console.log('✅ ADMIN role verified - user is authorized');
       console.log('✅ Proceeding with login...');
 
@@ -174,9 +174,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Handle different error formats
       const errorMessage = error.response?.data?.error?.message ||
-                           error.response?.data?.message ||
-                           error.message ||
-                           'Login failed';
+        error.response?.data?.message ||
+        error.message ||
+        'Login failed';
 
       console.log('❌ Extracted error message:', errorMessage);
       setError(errorMessage);
