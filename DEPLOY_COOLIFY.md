@@ -102,6 +102,14 @@ NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_key
     *   Check for strict Type info errors in the build log. (We verified `npm run build` locally, so this should pass).
     *   Ensure `lockfile` (`package-lock.json`) is in the repo (We pushed it).
 
+
+### "HTTP Error 503" or "Unable to download nixpkgs"
+*   **Cause**: This is a network issue between your VPS and GitHub, or GitHub is temporarily limiting requests. It is **not** an error in your code.
+*   **Fix**:
+    1.  **Retry the Deployment**: This is usually temporary. Clicking "Redeploy" often fixes it.
+    2.  **Check DNS**: If it persists, your VPS might have DNS issues resolving `github.com`.
+    3.  **Clear Cache**: In Coolify, you can try "Deploy with **Restart**" or check if there's an option to "Deploy without Cache" (though this specific error is in the initial download phase).
+
 ---
 
 ## 5. Why "Application" instead of "Static Site"?
