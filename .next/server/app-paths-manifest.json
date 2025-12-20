@@ -1,4 +1,18 @@
 {
   "/_not-found/page": "app/_not-found/page.js",
-  "/auth/login/page": "app/auth/login/page.js"
+  "/auth/login/page": "app/auth/login/page.js",
+  "/auth/register/page": "app/auth/register/page.js",
+  "/dashboard/master-data/categories/page": "app/dashboard/master-data/categories/page.js",
+  "/dashboard/master-data/branches/page": "app/dashboard/master-data/branches/page.js",
+  "/dashboard/master-data/colors/page": "app/dashboard/master-data/colors/page.js",
+  "/dashboard/master-data/information/page": "app/dashboard/master-data/information/page.js",
+  "/dashboard/master-data/page": "app/dashboard/master-data/page.js",
+  "/dashboard/master-data/supervisors/page": "app/dashboard/master-data/supervisors/page.js",
+  "/dashboard/master-data/vehicle-types/page": "app/dashboard/master-data/vehicle-types/page.js",
+  "/dashboard/master-data/vehicle-groups/page": "app/dashboard/master-data/vehicle-groups/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/dashboard/sales-monitoring/page": "app/dashboard/sales-monitoring/page.js",
+  "/dashboard/spk-management/page": "app/dashboard/spk-management/page.js",
+  "/page": "app/page.js",
+  "/dashboard/user-management/page": "app/dashboard/user-management/page.js"
 }
