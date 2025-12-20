@@ -40,11 +40,11 @@ Coolify will analyze the repository. Configure the settings as follows:
 
 *   **Build Pack**: `Nixpacks` (Selected by default)
 *   **Port Exposes**: `3000` (Default for Next.js)
-*   **Install Command**: `npm install` (or leave empty, Nixpacks detects it)
-*   **Build Command**: `npm run build` (or leave empty, Nixpacks detects it)
-*   **Start Command**: `npm start` (or leave empty, Nixpacks detects it)
+*   **Install Command**: `npm ci`
+*   **Build Command**: `npm run build`
+*   **Start Command**: `npm start`
 
-> **Note**: Nixpacks is smart enough to auto-detect Next.js projects. It will automatically run `npm run build` and start the server.
+> **Note**: The project is configured with `output: 'standalone'` in `next.config.js` and includes `sharp` for image optimization. Nixpacks handles this automatically.
 
 ### Step 3: Environment Variables
 1.  Navigate to the **Environment Variables** tab of your new application.
