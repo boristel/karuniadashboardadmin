@@ -505,26 +505,35 @@ export default function SpkManagementPage() {
 
   // Handle pagination change
   const handlePaginationModelChange = useCallback((newModel: GridPaginationModel) => {
-    setPaginationModel(newModel);
+    // Only update state if value actually changed to avoid render-phase updates
+    if (newModel.page !== paginationModel.page || newModel.pageSize !== paginationModel.pageSize) {
+      setPaginationModel(newModel);
+    }
     setPage(newModel.page + 1); // Convert to 1-based
     setPageSize(newModel.pageSize);
-  }, [setPage, setPageSize]);
+  }, [setPage, setPageSize, paginationModel]);
 
   // Handle sort change
   const handleSortModelChange = useCallback((newModel: GridSortModel) => {
-    setSortModel(newModel);
+    // Only update state if value actually changed to avoid render-phase updates
+    if (JSON.stringify(newModel) !== JSON.stringify(sortModel)) {
+      setSortModel(newModel);
+    }
     if (newModel[0]) {
       setSort(newModel[0].field, newModel[0].sort || 'desc');
     }
-  }, [setSort]);
+  }, [setSort, sortModel]);
 
   // Handle filter change
   const handleFilterModelChange = useCallback((newModel: GridFilterModel) => {
-    setFilterModel(newModel);
+    // Only update state if value actually changed to avoid render-phase updates
+    if (JSON.stringify(newModel) !== JSON.stringify(filterModel)) {
+      setFilterModel(newModel);
+    }
     if (newModel.items && newModel.items[0]) {
       setFilter(newModel.items[0].field, String(newModel.items[0].value));
     }
-  }, [setFilter]);
+  }, [setFilter, filterModel]);
 
   // Calculate statistics
   const stats = useMemo(() => {
@@ -612,6 +621,7 @@ export default function SpkManagementPage() {
                     rows={rows}
                     columns={columns}
                     pagination
+                    paginationMode="server"
                     paginationModel={paginationModel}
                     rowCount={pagination.total}
                     pageSizeOptions={[25, 50, 100]}
