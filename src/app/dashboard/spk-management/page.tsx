@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { ColumnDef } from '@tanstack/react-table';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,16 +24,18 @@ import {
 import { Switch } from '@/components/ui/switch';
 import DashboardLayout from '@/components/DashboardLayout';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import { spkAPI } from '@/services/api';
-import api from '@/services/api';
+import { useSpkData } from '@/hooks/useSpkData';
 import { toast } from 'sonner';
-import { MoreHorizontal, FileText, Download, Eye, Edit, CheckCircle, Clock, Edit3, FileDown, IdCard, Users } from 'lucide-react';
+import { MoreHorizontal, FileText, Download, Eye, Edit, CheckCircle, Clock, Edit3, FileDown, IdCard, Users, RefreshCw } from 'lucide-react';
 import { pdf } from '@react-pdf/renderer';
 import SpkDocument from '@/components/SpkDocument';
 import {
   DataGrid,
   GridColDef,
   GridRowParams,
+  GridPaginationModel,
+  GridSortModel,
+  GridFilterModel,
 } from '@mui/x-data-grid';
 import { Box, Typography } from '@mui/material';
 
@@ -61,9 +62,9 @@ interface SPK {
   kotacustomer: string | null;
   finish: boolean;
   editable: boolean;
-  ktpPaspor?: StrapiMedia | null;      // KTP/Passport document
-  kartuKeluarga?: StrapiMedia | null;  // Family Card document
-  selfie?: StrapiMedia | null;         // Selfie photo
+  ktpPaspor?: StrapiMedia | null;
+  kartuKeluarga?: StrapiMedia | null;
+  selfie?: StrapiMedia | null;
   salesProfile: {
     id: number;
     documentId: string;
@@ -97,8 +98,6 @@ interface SPK {
 }
 
 export default function SpkManagementPage() {
-  const [spks, setSpks] = useState<SPK[]>([]);
-  const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingSpk, setEditingSpk] = useState<SPK | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -109,50 +108,49 @@ export default function SpkManagementPage() {
     editable: false,
   });
 
-  // Fetch SPK data from API (last 2 months)
-  const fetchSpks = async () => {
-    try {
-      setLoading(true);
+  // Server-side state
+  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
+    page: 0,
+    pageSize: 25,
+  });
 
-      // Calculate date 2 months ago
-      const twoMonthsAgo = new Date();
-      twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
-      const twoMonthsAgoStr = twoMonthsAgo.toISOString().split('T')[0];
+  const [sortModel, setSortModel] = useState<GridSortModel>([
+    { field: 'createdAt', sort: 'desc' },
+  ]);
 
-      const response = await spkAPI.find({
-        filters: {
-          tanggal: {
-            $gte: twoMonthsAgoStr,
-          },
-        },
-        sort: {
-          createdAt: 'desc',
-        },
-        populate: '*',
-      });
+  const [filterModel, setFilterModel] = useState<GridFilterModel>({ items: [] });
 
-      setSpks(response.data || []);
-    } catch (error: any) {
-      console.error('Failed to fetch SPK data:', error);
-      toast.error('Failed to load SPK data');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchSpks();
-  }, []);
+  // Use custom hook for SPK data with React Query
+  const {
+    spks,
+    loading,
+    error,
+    refetch,
+    pagination,
+    setPage,
+    setPageSize,
+    setSort,
+    setFilter,
+    updateSpk,
+    isUpdating,
+  } = useSpkData({
+    page: paginationModel.page + 1, // MUI uses 0-based, API uses 1-based
+    pageSize: paginationModel.pageSize,
+    sortField: sortModel[0]?.field,
+    sortOrder: sortModel[0]?.sort || 'desc',
+    filterField: filterModel.items?.[0]?.field,
+    filterValue: filterModel.items?.[0]?.value as string,
+  });
 
   // Handle edit SPK
-  const handleEditSpk = (spk: SPK) => {
+  const handleEditSpk = useCallback((spk: SPK) => {
     setEditingSpk(spk);
     setFormData({
       finish: spk.finish,
       editable: spk.editable,
     });
     setIsEditModalOpen(true);
-  };
+  }, []);
 
   // Handle update SPK
   const handleUpdateSpk = async () => {
@@ -165,35 +163,31 @@ export default function SpkManagementPage() {
         editable: formData.editable,
       };
 
-      await spkAPI.update(editingSpk.documentId, updateData);
-      toast.success('SPK updated successfully');
+      await updateSpk(editingSpk.documentId, updateData);
       setIsEditModalOpen(false);
       setEditingSpk(null);
-      fetchSpks();
-    } catch (error: any) {
-      console.error('Failed to update SPK:', error);
-      toast.error(error.response?.data?.error?.message || 'Failed to update SPK');
+      // Refetch is automatic via React Query invalidation
     } finally {
       setIsSubmitting(false);
     }
   };
 
   // Close edit modal
-  const closeEditModal = () => {
+  const closeEditModal = useCallback(() => {
     setIsEditModalOpen(false);
     setEditingSpk(null);
-  };
+  }, []);
 
   // Handle form input changes
-  const handleInputChange = (field: 'finish' | 'editable', value: boolean) => {
+  const handleInputChange = useCallback((field: 'finish' | 'editable', value: boolean) => {
     setFormData(prev => ({
       ...prev,
       [field]: value,
     }));
-  };
+  }, []);
 
   // Handle PDF generation
-  const generatePdfData = (spk: SPK) => {
+  const generatePdfData = useCallback((spk: SPK) => {
     const formatDate = (dateString: string) => {
       if (!dateString) return '-';
       const date = new Date(dateString);
@@ -217,34 +211,34 @@ export default function SpkManagementPage() {
       customer: {
         namaLengkap: spk.namaCustomer || '-',
         alamat: spk.alamatCustomer || '-',
-        kecamatan: '-', // Additional field needed from backend
+        kecamatan: '-',
         kotaKabupaten: spk.kotacustomer || '-',
-        kodePos: '-', // Additional field needed from backend
+        kodePos: '-',
         noTelepon: spk.noTeleponCustomer || '-',
-        noTeleponAlt: '-', // Additional field needed from backend
+        noTeleponAlt: '-',
         email: spk.emailcustomer || '-',
-        noKtp: '-', // Additional field needed from backend
-        npwp: '-', // Additional field needed from backend
-        pembayaran: spk.unitInfo ? 'KREDIT' : 'TUNAI', // Based on payment info
-        jenisPerusahaan: 'Perorangan', // Default value
-        namaPerusahaan: '-', // Additional field needed from backend
-        alamatPerusahaan: '-', // Additional field needed from backend
-        npwpPerusahaan: '-', // Additional field needed from backend
+        noKtp: '-',
+        npwp: '-',
+        pembayaran: spk.unitInfo ? 'KREDIT' : 'TUNAI',
+        jenisPerusahaan: 'Perorangan',
+        namaPerusahaan: '-',
+        alamatPerusahaan: '-',
+        npwpPerusahaan: '-',
       },
       vehicle: {
         tipeKendaraan: (spk.unitInfo && spk.unitInfo.vehicleType && spk.unitInfo.vehicleType.name) ? spk.unitInfo.vehicleType.name : '-',
         tahunPembuatan: (spk.unitInfo && spk.unitInfo.tahun) ? spk.unitInfo.tahun : new Date().getFullYear().toString(),
         warnaKendaraan: (spk.unitInfo && spk.unitInfo.color && spk.unitInfo.color.colorname) ? spk.unitInfo.color.colorname : '-',
-        warnaInterior: 'ABU-ABU', // Default value
+        warnaInterior: 'ABU-ABU',
         noMesin: (spk.unitInfo && spk.unitInfo.noMesin) ? spk.unitInfo.noMesin : 'Dilihat pada unit',
         noRangka: (spk.unitInfo && spk.unitInfo.noRangka) ? spk.unitInfo.noRangka : 'Dilihat pada unit',
         hargaSatuan: (spk.unitInfo && spk.unitInfo.hargaOtr) ? spk.unitInfo.hargaOtr.toString() : '0',
-        aksesoris: [], // Empty for now
+        aksesoris: [],
         totalHarga: (spk.unitInfo && spk.unitInfo.hargaOtr) ? spk.unitInfo.hargaOtr.toString() : '0',
         uangMuka: (spk.unitInfo && spk.unitInfo.hargaOtr) ? Math.floor(spk.unitInfo.hargaOtr * 0.3).toString() : '0',
         sisaPembayaran: (spk.unitInfo && spk.unitInfo.hargaOtr) ? Math.floor(spk.unitInfo.hargaOtr * 0.7).toString() : '0',
-        alamatKirim: spk.alamatCustomer || '-', // Use customer address as delivery address
-        jangkaWaktuPengiriman: '12 minggu', // Default delivery time
+        alamatKirim: spk.alamatCustomer || '-',
+        jangkaWaktuPengiriman: '12 minggu',
         namaPenerima: spk.namaCustomer || '-',
       },
       sales: {
@@ -255,20 +249,18 @@ export default function SpkManagementPage() {
         cabang: spk.salesProfile?.city || '-',
       },
     };
-  };
+  }, []);
 
   // Handle PDF preview
-  const handlePreviewPdf = async (spk: SPK) => {
+  const handlePreviewPdf = useCallback(async (spk: SPK) => {
     try {
       const pdfData = generatePdfData(spk);
       const doc = <SpkDocument data={pdfData} />;
       const pdfBlob = await pdf(doc).toBlob();
 
-      // Open in new tab for preview
       const url = URL.createObjectURL(pdfBlob);
       window.open(url, '_blank');
 
-      // Clean up URL after 5 minutes
       setTimeout(() => {
         URL.revokeObjectURL(url);
       }, 300000);
@@ -276,16 +268,15 @@ export default function SpkManagementPage() {
       console.error('Error previewing PDF:', error);
       toast.error('Failed to preview PDF');
     }
-  };
+  }, [generatePdfData]);
 
   // Handle PDF download
-  const handleDownloadPdf = async (spk: SPK) => {
+  const handleDownloadPdf = useCallback(async (spk: SPK) => {
     try {
       const pdfData = generatePdfData(spk);
       const doc = <SpkDocument data={pdfData} />;
       const pdfBlob = await pdf(doc).toBlob();
 
-      // Create download link
       const url = URL.createObjectURL(pdfBlob);
       const link = document.createElement('a');
       link.href = url;
@@ -300,33 +291,31 @@ export default function SpkManagementPage() {
       console.error('Error downloading PDF:', error);
       toast.error('Failed to download PDF');
     }
-  };
+  }, [generatePdfData]);
 
   // Get the Strapi base URL for media downloads
-  const getStrapiBaseUrl = () => {
+  const getStrapiBaseUrl = useCallback(() => {
     return process.env.NEXT_PUBLIC_STRAPI_URL?.replace('/api', '') || '';
-  };
+  }, []);
 
   // Generic file download handler for Strapi media
-  const handleDownloadMedia = async (media: StrapiMedia | null | undefined, fileName: string, documentType: string) => {
+  const handleDownloadMedia = useCallback(async (media: StrapiMedia | null | undefined, fileName: string, documentType: string) => {
     if (!media) {
       toast.error(`No ${documentType} document available`);
       return;
     }
 
     try {
-      // Construct full URL for the media file
       const strapiBaseUrl = getStrapiBaseUrl();
       const mediaUrl = media.url.startsWith('http')
         ? media.url
         : `${strapiBaseUrl}${media.url}`;
 
-      // Fetch the file using authenticated axios instance
+      const { default: api } = await import('@/services/api');
       const response = await api.get(mediaUrl, {
         responseType: 'blob',
       });
 
-      // Create download link
       const blob = new Blob([response.data], { type: media.mime || 'application/octet-stream' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -342,25 +331,25 @@ export default function SpkManagementPage() {
       console.error(`Error downloading ${documentType}:`, error);
       toast.error(`Failed to download ${documentType}`);
     }
-  };
+  }, [getStrapiBaseUrl]);
 
   // Handle KTP download
-  const handleDownloadKtp = async (spk: SPK) => {
-    await handleDownloadMedia(spk.ktpPaspor, `KTP_${spk.noSPK}`, 'KTP');
-  };
+  const handleDownloadKtp = useCallback((spk: SPK) => {
+    handleDownloadMedia(spk.ktpPaspor, `KTP_${spk.noSPK}`, 'KTP');
+  }, [handleDownloadMedia]);
 
   // Handle KK download
-  const handleDownloadKk = async (spk: SPK) => {
-    await handleDownloadMedia(spk.kartuKeluarga, `KK_${spk.noSPK}`, 'Kartu Keluarga');
-  };
+  const handleDownloadKk = useCallback((spk: SPK) => {
+    handleDownloadMedia(spk.kartuKeluarga, `KK_${spk.noSPK}`, 'Kartu Keluarga');
+  }, [handleDownloadMedia]);
 
   // Handle Selfie download
-  const handleDownloadSelfie = async (spk: SPK) => {
-    await handleDownloadMedia(spk.selfie, `Selfie_${spk.noSPK}`, 'Selfie');
-  };
+  const handleDownloadSelfie = useCallback((spk: SPK) => {
+    handleDownloadMedia(spk.selfie, `Selfie_${spk.noSPK}`, 'Selfie');
+  }, [handleDownloadMedia]);
 
   // Prepare data for MUIDataGrid
-  const rows = spks.map((spk) => ({
+  const rows = useMemo(() => spks.map((spk) => ({
     id: spk.documentId,
     documentId: spk.documentId,
     noSPK: spk.noSPK,
@@ -374,9 +363,9 @@ export default function SpkManagementPage() {
     editable: spk.editable,
     finish: spk.finish,
     originalData: spk,
-  }));
+  })), [spks]);
 
-  const columns: GridColDef[] = [
+  const columns: GridColDef[] = useMemo(() => [
     {
       field: 'noSPK',
       headerName: 'No SPK',
@@ -512,12 +501,38 @@ export default function SpkManagementPage() {
         );
       },
     },
-  ];
+  ], [handleEditSpk, handlePreviewPdf, handleDownloadPdf, handleDownloadKtp, handleDownloadKk, handleDownloadSelfie]);
+
+  // Handle pagination change
+  const handlePaginationModelChange = useCallback((newModel: GridPaginationModel) => {
+    setPaginationModel(newModel);
+    setPage(newModel.page + 1); // Convert to 1-based
+    setPageSize(newModel.pageSize);
+  }, [setPage, setPageSize]);
+
+  // Handle sort change
+  const handleSortModelChange = useCallback((newModel: GridSortModel) => {
+    setSortModel(newModel);
+    if (newModel[0]) {
+      setSort(newModel[0].field, newModel[0].sort || 'desc');
+    }
+  }, [setSort]);
+
+  // Handle filter change
+  const handleFilterModelChange = useCallback((newModel: GridFilterModel) => {
+    setFilterModel(newModel);
+    if (newModel.items && newModel.items[0]) {
+      setFilter(newModel.items[0].field, String(newModel.items[0].value));
+    }
+  }, [setFilter]);
 
   // Calculate statistics
-  const totalSpks = spks.length;
-  const finishedSpks = spks.filter(s => s.finish).length;
-  const progressSpks = spks.filter(s => !s.finish).length;
+  const stats = useMemo(() => {
+    const totalSpks = pagination.total;
+    const finishedSpks = spks.filter(s => s.finish).length;
+    const progressSpks = spks.filter(s => !s.finish).length;
+    return { totalSpks, finishedSpks, progressSpks };
+  }, [pagination.total, spks]);
 
   return (
     <ProtectedRoute>
@@ -529,7 +544,15 @@ export default function SpkManagementPage() {
               <h1 className="text-3xl font-bold text-gray-900">SPK Management</h1>
               <p className="text-gray-600">Manage vehicle orders and generate PDF documents</p>
             </div>
-            {/* No Create button as per requirements */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              disabled={loading}
+            >
+              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
           </div>
 
           {/* Stats Cards */}
@@ -540,7 +563,7 @@ export default function SpkManagementPage() {
                 <FileText className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{totalSpks}</div>
+                <div className="text-2xl font-bold">{stats.totalSpks}</div>
                 <p className="text-xs text-muted-foreground">Last 2 months</p>
               </CardContent>
             </Card>
@@ -550,7 +573,7 @@ export default function SpkManagementPage() {
                 <Clock className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-yellow-600">{progressSpks}</div>
+                <div className="text-2xl font-bold text-yellow-600">{stats.progressSpks}</div>
                 <p className="text-xs text-muted-foreground">Active orders</p>
               </CardContent>
             </Card>
@@ -560,7 +583,7 @@ export default function SpkManagementPage() {
                 <CheckCircle className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-green-600">{finishedSpks}</div>
+                <div className="text-2xl font-bold text-green-600">{stats.finishedSpks}</div>
                 <p className="text-xs text-muted-foreground">Completed orders</p>
               </CardContent>
             </Card>
@@ -571,11 +594,11 @@ export default function SpkManagementPage() {
             <CardHeader>
               <CardTitle>SPK List</CardTitle>
               <CardDescription>
-                Showing SPK data from the last 2 months
+                {pagination.total} total records • Page {pagination.page} of {pagination.pageCount}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {loading ? (
+              {loading && spks.length === 0 ? (
                 <div className="flex items-center justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
@@ -588,14 +611,21 @@ export default function SpkManagementPage() {
                   <DataGrid
                     rows={rows}
                     columns={columns}
-                    pageSizeOptions={[10, 25, 50]}
-                    initialState={{
-                      pagination: {
-                        paginationModel: { pageSize: 10 },
-                      },
-                    }}
+                    pagination
+                    paginationModel={paginationModel}
+                    rowCount={pagination.total}
+                    pageSizeOptions={[25, 50, 100]}
+                    onPaginationModelChange={handlePaginationModelChange}
+                    sortingMode="server"
+                    sortModel={sortModel}
+                    onSortModelChange={handleSortModelChange}
+                    filterMode="server"
+                    filterModel={filterModel}
+                    onFilterModelChange={handleFilterModelChange}
                     disableRowSelectionOnClick
                     getRowId={(row) => row.id}
+                    loading={loading}
+                    disableVirtualization
                   />
                 </Box>
               )}

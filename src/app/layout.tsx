@@ -3,6 +3,7 @@ import './globals.css';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { Toaster } from 'sonner';
 import ThemeRegistry from './theme/ThemeRegistry';
+import { QueryClientProvider } from '@/providers/QueryClientProvider';
 
 export const metadata: Metadata = {
   title: 'Car Dealer Dashboard',
@@ -18,10 +19,12 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <ThemeRegistry>
-          <AuthProvider>
-            {children}
-            <Toaster />
-          </AuthProvider>
+          <QueryClientProvider>
+            <AuthProvider>
+              {children}
+              <Toaster />
+            </AuthProvider>
+          </QueryClientProvider>
         </ThemeRegistry>
       </body>
     </html>
