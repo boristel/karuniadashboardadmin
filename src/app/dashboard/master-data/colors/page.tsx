@@ -39,29 +39,16 @@ export default function ColorsPage() {
   });
 
   const fetchData = async () => {
-    console.log('🚀 [Colors] fetchData started');
     try {
       setLoading(true);
-      console.log('📡 [Colors] Making API call to colors...');
       const response = await colorsAPI.find();
-      console.log('📊 [Colors] API Response received:', {
-        hasData: !!response?.data,
-        dataCount: response?.data?.length || 0,
-        keys: response ? Object.keys(response) : 'null',
-      });
       const colorsData = response.data || [];
-      console.log('📋 [Colors] Setting state:', {
-        colorsCount: colorsData.length,
-        colorsSample: colorsData.slice(0, 2),
-      });
       setData(colorsData);
-      console.log('✅ [Colors] fetchData completed successfully');
     } catch (error) {
-      console.error('❌ [Colors] fetchData failed:', error);
+      console.error('Failed to load colors:', error);
       toast.error('Failed to load colors');
     } finally {
       setLoading(false);
-      console.log('⏳ [Colors] setLoading(false) - loading complete');
     }
   };
 
@@ -97,7 +84,6 @@ export default function ColorsPage() {
   ];
 
   const handleAdd = () => {
-    console.log('➕ [Colors] handleAdd called');
     setFormData({
       colorname: '',
     });
@@ -105,15 +91,12 @@ export default function ColorsPage() {
   };
 
   const handleEdit = (item: Color) => {
-    console.log('✏️ [Colors] handleEdit called with item:', item);
     setEditingItem(item);
     setFormData(item);
     setIsEditDialogOpen(true);
   };
 
-  
   const handleSave = async () => {
-    console.log('💾 [Colors] handleSave called with formData:', formData);
     try {
       if (editingItem) {
         const dataToUpdate = {
@@ -131,7 +114,7 @@ export default function ColorsPage() {
       setIsEditDialogOpen(false);
       setIsAddDialogOpen(false);
       setEditingItem(null);
-      fetchData(); // Refetch data
+      fetchData();
     } catch (error) {
       console.error('Failed to save color:', error);
       toast.error('Failed to save color');

@@ -65,7 +65,6 @@ export default function DashboardPage() {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        console.log('📊 Dashboard: Fetching data...');
 
         // Safety timeout
         const timeoutPromise = new Promise((_, reject) => {
@@ -103,8 +102,6 @@ export default function DashboardPage() {
           spkMonthRes,
           recentSpkRes
         ] = await Promise.race([dataPromise, timeoutPromise]) as any[];
-
-        console.log('📊 Dashboard: Data fetched successfully');
 
         setStats({
           totalVehicles: vehiclesRes.meta?.pagination?.total || 0,

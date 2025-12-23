@@ -26,8 +26,9 @@ import { Switch } from '@/components/ui/switch';
 import DashboardLayout from '@/components/DashboardLayout';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { spkAPI } from '@/services/api';
+import api from '@/services/api';
 import { toast } from 'sonner';
-import { MoreHorizontal, FileText, Download, Eye, Edit, CheckCircle, Clock, Edit3 } from 'lucide-react';
+import { MoreHorizontal, FileText, Download, Eye, Edit, CheckCircle, Clock, Edit3, FileDown, IdCard, Users } from 'lucide-react';
 import { pdf } from '@react-pdf/renderer';
 import SpkDocument from '@/components/SpkDocument';
 import {
@@ -36,6 +37,15 @@ import {
   GridRowParams,
 } from '@mui/x-data-grid';
 import { Box, Typography } from '@mui/material';
+
+// Strapi Media upload type
+interface StrapiMedia {
+  id: number;
+  name: string;
+  url: string;
+  mime: string;
+  size: number;
+}
 
 interface SPK {
   id: number;
@@ -51,6 +61,9 @@ interface SPK {
   kotacustomer: string | null;
   finish: boolean;
   editable: boolean;
+  ktpPaspor?: StrapiMedia | null;      // KTP/Passport document
+  kartuKeluarga?: StrapiMedia | null;  // Family Card document
+  selfie?: StrapiMedia | null;         // Selfie photo
   salesProfile: {
     id: number;
     documentId: string;
@@ -289,6 +302,63 @@ export default function SpkManagementPage() {
     }
   };
 
+  // Get the Strapi base URL for media downloads
+  const getStrapiBaseUrl = () => {
+    return process.env.NEXT_PUBLIC_STRAPI_URL?.replace('/api', '') || '';
+  };
+
+  // Generic file download handler for Strapi media
+  const handleDownloadMedia = async (media: StrapiMedia | null | undefined, fileName: string, documentType: string) => {
+    if (!media) {
+      toast.error(`No ${documentType} document available`);
+      return;
+    }
+
+    try {
+      // Construct full URL for the media file
+      const strapiBaseUrl = getStrapiBaseUrl();
+      const mediaUrl = media.url.startsWith('http')
+        ? media.url
+        : `${strapiBaseUrl}${media.url}`;
+
+      // Fetch the file using authenticated axios instance
+      const response = await api.get(mediaUrl, {
+        responseType: 'blob',
+      });
+
+      // Create download link
+      const blob = new Blob([response.data], { type: media.mime || 'application/octet-stream' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${fileName}.${media.name.split('.').pop() || 'pdf'}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success(`${documentType} downloaded successfully`);
+    } catch (error) {
+      console.error(`Error downloading ${documentType}:`, error);
+      toast.error(`Failed to download ${documentType}`);
+    }
+  };
+
+  // Handle KTP download
+  const handleDownloadKtp = async (spk: SPK) => {
+    await handleDownloadMedia(spk.ktpPaspor, `KTP_${spk.noSPK}`, 'KTP');
+  };
+
+  // Handle KK download
+  const handleDownloadKk = async (spk: SPK) => {
+    await handleDownloadMedia(spk.kartuKeluarga, `KK_${spk.noSPK}`, 'Kartu Keluarga');
+  };
+
+  // Handle Selfie download
+  const handleDownloadSelfie = async (spk: SPK) => {
+    await handleDownloadMedia(spk.selfie, `Selfie_${spk.noSPK}`, 'Selfie');
+  };
+
   // Prepare data for MUIDataGrid
   const rows = spks.map((spk) => ({
     id: spk.documentId,
@@ -423,6 +493,19 @@ export default function SpkManagementPage() {
               <DropdownMenuItem onClick={() => handleDownloadPdf(spk)}>
                 <Download className="mr-2 h-4 w-4" />
                 Download PDF
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => handleDownloadKtp(spk)} disabled={!spk.ktpPaspor}>
+                <IdCard className="mr-2 h-4 w-4" />
+                Download KTP
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleDownloadKk(spk)} disabled={!spk.kartuKeluarga}>
+                <Users className="mr-2 h-4 w-4" />
+                Download KK
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleDownloadSelfie(spk)} disabled={!spk.selfie}>
+                <FileDown className="mr-2 h-4 w-4" />
+                Download Other
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

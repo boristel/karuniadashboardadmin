@@ -13,9 +13,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const router = useRouter();
 
   useEffect(() => {
-    console.log('🛡️ ProtectedRoute: Checking auth state', { isLoading, hasUser: !!user });
     if (!isLoading && !user) {
-      console.log('🛡️ ProtectedRoute: No user, redirecting to login');
       router.push('/auth/login');
     }
   }, [user, isLoading, router]);

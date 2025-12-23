@@ -79,24 +79,8 @@ export default function SalesMonitoringPage() {
   const fetchSalesData = async () => {
     try {
       setLoading(true);
-      console.log('🔄 [SalesMonitoring] Fetching sales data...');
       const response = await salesMonitoringAPI.getSalesProfilesWithSPK();
       const salesData = response.data || [];
-      console.log('📊 [SalesMonitoring] Received', salesData.length, 'sales profiles');
-
-      // Log first few items to check structure
-      if (salesData.length > 0) {
-        const firstProfile = salesData[0];
-        console.log('📝 [SalesMonitoring] First sales profile structure:', {
-          id: firstProfile.id,
-          surename: firstProfile.surename,
-          city: firstProfile.city,
-          location: firstProfile.location,
-          online_stat: firstProfile.online_stat,
-          photo_profile: firstProfile.photo_profile ? 'exists' : 'null'
-        });
-        console.log('📸 [SalesMonitoring] Photo profile structure:', firstProfile.photo_profile);
-      }
 
       setSalesData(salesData);
     } catch (error) {
@@ -147,8 +131,6 @@ export default function SalesMonitoringPage() {
   const updateMarkers = useCallback(() => {
     if (!map) return;
 
-    console.log('🗺️ [SalesMonitoring] Updating markers for', salesData.length, 'sales profiles');
-
     // Clear existing markers
     markers.forEach(marker => marker.setMap(null));
 
@@ -160,15 +142,9 @@ export default function SalesMonitoringPage() {
       .filter(sales => {
         // Only show sales with location data
         if (!sales.location || !sales.location.latitude || !sales.location.longitude) {
-          console.log('⚠️ [SalesMonitoring] Skipping', sales.surename, '- no location data');
           return false;
         }
-        const show = selectedBranch === 'all' || sales.city === selectedBranch;
-        if (show) {
-          markerCount++;
-          console.log('✅ [SalesMonitoring] Adding marker for', sales.surename, 'at', sales.location.latitude, sales.location.longitude);
-        }
-        return show;
+        return selectedBranch === 'all' || sales.city === selectedBranch;
       })
       .forEach(sales => {
         const marker = new (window.google.maps.Marker as any)({
@@ -226,7 +202,6 @@ export default function SalesMonitoringPage() {
       });
 
     setMarkers(newMarkers);
-    console.log('📍 [SalesMonitoring] Added', markerCount, 'markers to map');
 
     // Fit map to show all markers
     if (!bounds.isEmpty()) {

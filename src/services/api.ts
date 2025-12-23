@@ -19,31 +19,19 @@ api.interceptors.request.use(
     // Don't add Authorization header for auth endpoints
     const isAuthEndpoint = config.url?.includes('/auth/');
 
-    console.log(`🌐 MAIN API REQUEST: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`, {
-      isAuthEndpoint,
-      hasJwtToken: !!localStorage.getItem('jwt_token'),
-      hasApiToken: !!API_TOKEN,
-      headers: config.headers,
-      data: config.data
-    });
-
     if (!isAuthEndpoint) {
       const token = localStorage.getItem('jwt_token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
-        console.log(`🔐 Added JWT token to request`);
       } else if (API_TOKEN) {
         // Use API token only if no JWT token present
         config.headers.Authorization = `Bearer ${API_TOKEN}`;
-        console.log(`🔑 Added API token to request`);
       }
-    } else {
-      console.log(`🚫 Skipping auth token for auth endpoint`);
     }
     return config;
   },
   (error) => {
-    console.error('❌ Request interceptor error:', error);
+    console.error('Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
@@ -53,12 +41,6 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      console.warn('⚠️ API Interceptor: 401 Unauthorized detected', {
-        url: error.config?.url,
-        method: error.config?.method,
-        status: error.response?.status,
-        data: error.response?.data
-      });
       // Unauthorized - clear token and redirect to login
       localStorage.removeItem('jwt_token');
       localStorage.removeItem('user');
@@ -71,15 +53,11 @@ api.interceptors.response.use(
 // Test function to check Strapi endpoints
 export const testStrapiConnection = async () => {
   try {
-    console.log('Testing Strapi connection...');
-
     // Test 1: Check if Strapi is running
-    const response1 = await axios.get(`${STRAPI_BASE_URL}/`);
-    console.log('Strapi root status:', response1.status);
+    await axios.get(`${STRAPI_BASE_URL}/`);
 
     // Test 2: Check if API endpoints exist
-    const response2 = await axios.get(`${API_BASE_URL}/users`);
-    console.log('API users status:', response2.status);
+    await axios.get(`${API_BASE_URL}/users`);
 
     // Test 3: Try auth endpoint with different URLs
     const possibleAuthUrls = [
@@ -90,12 +68,11 @@ export const testStrapiConnection = async () => {
 
     for (const url of possibleAuthUrls) {
       try {
-        const testResponse = await axios.post(url, {}, {
-          validateStatus: () => true // Don't throw on error status codes
+        await axios.post(url, {}, {
+          validateStatus: () => true
         });
-        console.log(`Auth endpoint test for ${url}:`, testResponse.status, testResponse.statusText);
-      } catch (e: any) {
-        console.log(`Auth endpoint test for ${url}: ERROR`, e.code);
+      } catch (e) {
+        // Continue testing
       }
     }
 
@@ -115,18 +92,13 @@ export const authAPI = {
       '/admin/login', // Admin panel endpoint
     ];
 
-    console.log('🔍 API_BASE_URL:', API_BASE_URL);
-    console.log('🔍 STRAPI_BASE_URL:', STRAPI_BASE_URL);
-
     for (const endpoint of endpoints) {
-      // Use API_BASE_URL for auth endpoints (includes /api)
       const loginUrl = `${API_BASE_URL}${endpoint}`;
-      console.log(`=== Attempting login to: ${loginUrl} ===`);
 
       try {
         // Use direct axios call to avoid baseURL confusion
         const axiosInstance = axios.create({
-          baseURL: API_BASE_URL, // Use API_BASE_URL which includes /api
+          baseURL: API_BASE_URL,
           headers: {
             'Content-Type': 'application/json',
           },
@@ -134,64 +106,31 @@ export const authAPI = {
 
         // Try different payload formats
         const payloads = [
-          { identifier, password },    // Standard format
-          { email: identifier, password }, // Admin format
+          { identifier, password },
+          { email: identifier, password },
         ];
 
         for (const payload of payloads) {
           try {
-            console.log(`--- Trying payload for ${endpoint}:`, payload);
-
             const response = await axiosInstance.post(endpoint, payload);
-
-            console.log(`✅ SUCCESS! Login successful with ${endpoint} using payload:`, payload);
-            console.log(`✅ Response data:`, response.data);
-            console.log(`✅ Response headers:`, response.headers);
-            console.log(`✅ Response status:`, response.status);
-
             return response.data;
           } catch (payloadError: any) {
-            console.log(`❌ Payload failed for ${endpoint}:`, {
-              status: payloadError.response?.status,
-              statusText: payloadError.response?.statusText,
-              data: payloadError.response?.data,
-              config: {
-                method: payloadError.config?.method,
-                url: payloadError.config?.url,
-                baseURL: payloadError.config?.baseURL,
-                headers: payloadError.config?.headers
-              }
-            });
-
-            // 400 means endpoint exists but credentials are wrong - this is expected behavior
+            // 400 means endpoint exists but credentials are wrong
             if (payloadError.response?.status === 400) {
-              console.log(`ℹ️ INFO: 400 Bad Request for ${endpoint} - endpoint exists but credentials are invalid`);
-
-              // If this is the first endpoint that returns 400, throw it so user sees "Invalid credentials"
               throw payloadError;
             }
-
-            // If we get other errors (404, 405, etc.), continue to next payload
+            // Continue to next payload
             continue;
           }
         }
       } catch (endpointError: any) {
-        console.log(`=== Endpoint ${endpoint} completely failed ===`, {
-          status: endpointError.response?.status,
-          statusText: endpointError.response?.statusText,
-          data: endpointError.response?.data,
-          message: endpointError.message
-        });
-
         // If this endpoint doesn't exist (404) or method not allowed (405), try next endpoint
         if (endpointError.response?.status === 404 || endpointError.response?.status === 405) {
-          console.log(`ℹ️ INFO: Endpoint ${endpoint} not available (${endpointError.response?.status}), trying next endpoint`);
           continue;
         }
 
-        // If we got a 400 (invalid credentials), that means the endpoint exists but credentials are wrong
+        // If we got a 400 (invalid credentials), throw error
         if (endpointError.response?.status === 400) {
-          console.log(`ℹ️ INFO: Endpoint ${endpoint} exists but credentials invalid - throwing error`);
           throw endpointError;
         }
 
@@ -200,8 +139,6 @@ export const authAPI = {
       }
     }
 
-    // If we get here, all endpoints failed with non-400 errors
-    console.error(`🚨 ERROR: All authentication endpoints failed`);
     throw new Error('No valid authentication endpoint found');
   },
 
@@ -243,18 +180,11 @@ export const authAPI = {
 // Generic CRUD operations
 export const createCRUDAPI = (endpoint: string) => ({
   getAll: async (params = {}) => {
-    console.log(`🔍 [CRUD] ${endpoint}.getAll called with params:`, params);
     try {
       const response = await api.get(`/${endpoint}`, { params });
-      console.log(`✅ [CRUD] ${endpoint}.getAll SUCCESS:`, {
-        status: response.status,
-        dataCount: response.data?.data?.length || 0,
-        hasData: !!response.data?.data,
-        dataKeys: response.data ? Object.keys(response.data) : 'null'
-      });
-      return response.data; // Returns { data: [...], meta: {...} }
+      return response.data;
     } catch (error: any) {
-      console.error(`❌ [CRUD] ${endpoint}.getAll ERROR:`, {
+      console.error(`[CRUD] ${endpoint}.getAll ERROR:`, {
         message: error.message,
         status: error.response?.status,
         statusText: error.response?.statusText,
@@ -265,16 +195,11 @@ export const createCRUDAPI = (endpoint: string) => ({
   },
 
   getById: async (id: string | number) => {
-    console.log(`🔍 [CRUD] ${endpoint}.getById called with id:`, id);
     try {
       const response = await api.get(`/${endpoint}/${id}`);
-      console.log(`✅ [CRUD] ${endpoint}.getById SUCCESS:`, {
-        status: response.status,
-        hasData: !!response.data?.data
-      });
-      return response.data; // Returns { data: {...} }
+      return response.data;
     } catch (error: any) {
-      console.error(`❌ [CRUD] ${endpoint}.getById ERROR:`, {
+      console.error(`[CRUD] ${endpoint}.getById ERROR:`, {
         message: error.message,
         status: error.response?.status,
         statusText: error.response?.statusText
@@ -284,16 +209,11 @@ export const createCRUDAPI = (endpoint: string) => ({
   },
 
   create: async (data: any) => {
-    console.log(`🔍 [CRUD] ${endpoint}.create called with data:`, data);
     try {
       const response = await api.post(`/${endpoint}`, { data });
-      console.log(`✅ [CRUD] ${endpoint}.create SUCCESS:`, {
-        status: response.status,
-        hasData: !!response.data?.data
-      });
       return response.data;
     } catch (error: any) {
-      console.error(`❌ [CRUD] ${endpoint}.create ERROR:`, {
+      console.error(`[CRUD] ${endpoint}.create ERROR:`, {
         message: error.message,
         status: error.response?.status,
         statusText: error.response?.statusText,
@@ -304,16 +224,11 @@ export const createCRUDAPI = (endpoint: string) => ({
   },
 
   update: async (id: string | number, data: any) => {
-    console.log(`🔍 [CRUD] ${endpoint}.update called with id:`, id, 'data:', data);
     try {
       const response = await api.put(`/${endpoint}/${id}`, { data });
-      console.log(`✅ [CRUD] ${endpoint}.update SUCCESS:`, {
-        status: response.status,
-        hasData: !!response.data?.data
-      });
       return response.data;
     } catch (error: any) {
-      console.error(`❌ [CRUD] ${endpoint}.update ERROR:`, {
+      console.error(`[CRUD] ${endpoint}.update ERROR:`, {
         message: error.message,
         status: error.response?.status,
         statusText: error.response?.statusText,
@@ -324,16 +239,11 @@ export const createCRUDAPI = (endpoint: string) => ({
   },
 
   delete: async (id: string | number) => {
-    console.log(`🔍 [CRUD] ${endpoint}.delete called with id:`, id);
     try {
       const response = await api.delete(`/${endpoint}/${id}`);
-      console.log(`✅ [CRUD] ${endpoint}.delete SUCCESS:`, {
-        status: response.status,
-        hasData: !!response.data?.data
-      });
-      return response.data; // Returns { data: {...}, meta: {...} }
+      return response.data;
     } catch (error: any) {
-      console.error(`❌ [CRUD] ${endpoint}.delete ERROR:`, {
+      console.error(`[CRUD] ${endpoint}.delete ERROR:`, {
         message: error.message,
         status: error.response?.status,
         statusText: error.response?.statusText
@@ -344,7 +254,6 @@ export const createCRUDAPI = (endpoint: string) => ({
 
   // Custom query for Strapi filters
   find: async (filters = {}) => {
-    console.log(`🔍 [CRUD] ${endpoint}.find called with filters:`, filters);
     try {
       const response = await api.get(`/${endpoint}`, {
         params: {
@@ -352,16 +261,9 @@ export const createCRUDAPI = (endpoint: string) => ({
           ...filters,
         },
       });
-      console.log(`✅ [CRUD] ${endpoint}.find SUCCESS:`, {
-        status: response.status,
-        dataCount: response.data?.data?.length || 0,
-        hasData: !!response.data?.data,
-        dataKeys: response.data ? Object.keys(response.data) : 'null'
-      });
-      console.log(`📊 [CRUD] ${endpoint}.find data sample:`, response.data?.data?.slice(0, 1));
-      return response.data; // Returns { data: [...], meta: {...} }
+      return response.data;
     } catch (error: any) {
-      console.error(`❌ [CRUD] ${endpoint}.find ERROR:`, {
+      console.error(`[CRUD] ${endpoint}.find ERROR:`, {
         message: error.message,
         status: error.response?.status,
         statusText: error.response?.statusText,
@@ -391,7 +293,6 @@ export const articlesAPI = createCRUDAPI('articles');
 export const salesMonitoringAPI = {
   // Get all sales profiles with their SPK data and populated relationships
   getSalesProfilesWithSPK: async () => {
-    // Use URL-encoded populate parameters for Strapi
     const populateParams = [
       'populate[photo_profile]',
       'populate[spks][populate][unitInfo][populate][vehicleType]',
@@ -400,38 +301,22 @@ export const salesMonitoringAPI = {
       'populate[spks][populate][paymentInfo]'
     ];
 
-    const params = {
-      populate: populateParams.join('&'),
-      filters: {
-        blocked: false
-      },
-      sort: 'updatedAt:desc'
-    };
-
-    console.log('🔍 [SalesMonitoring] API Request params:', JSON.stringify(params, null, 2));
-
     try {
-      // Build the URL manually for complex populate
       const queryString = new URLSearchParams();
       populateParams.forEach(param => queryString.append(param, ''));
       queryString.append('filters[blocked]', 'false');
       queryString.append('sort', 'updatedAt:desc');
 
       const response = await api.get(`/sales-profiles?${queryString.toString()}`);
-      console.log('✅ [SalesMonitoring] API Response status:', response.status);
-      console.log('📊 [SalesMonitoring] Response data count:', response.data?.data?.length || 0);
       return response.data;
     } catch (error: any) {
-      console.error('❌ [SalesMonitoring] API Error:', error.response?.status, error.response?.data);
+      console.error('[SalesMonitoring] API Error:', error.response?.status, error.response?.data);
       // Try simpler populate if complex one fails
       try {
-        console.log('🔄 [SalesMonitoring] Trying simpler populate...');
         const response = await api.get('/sales-profiles?populate=*');
-        console.log('✅ [SalesMonitoring] Simple populate Response status:', response.status);
-        console.log('📊 [SalesMonitoring] Response data count:', response.data?.data?.length || 0);
         return response.data;
       } catch (fallbackError: any) {
-        console.error('❌ [SalesMonitoring] Fallback API Error:', fallbackError.response?.status, fallbackError.response?.data);
+        console.error('[SalesMonitoring] Fallback API Error:', fallbackError.response?.status, fallbackError.response?.data);
         throw fallbackError;
       }
     }

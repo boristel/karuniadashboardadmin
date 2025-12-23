@@ -47,13 +47,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Verify token is still valid
           const userData = await authAPI.me();
 
-          // ⭐ ROLE-BASED ACCESS CONTROL CHECK
-          console.log('🔐 checkAuth: Verifying role_custom for existing session:', userData?.role_custom);
-
+          // ROLE-BASED ACCESS CONTROL CHECK
           if (!userData.role_custom || userData.role_custom !== 'ADMIN') {
-            console.log('❌ checkAuth: User is not ADMIN - clearing session');
-            console.log('❌ checkAuth: role_custom value:', userData.role_custom || 'undefined');
-
             // Show toast notification for session termination
             toast.error('Session Terminated: Your account does not have administrative privileges. Access denied.', {
               duration: 5000,
@@ -67,7 +62,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             throw new Error('Access denied. Your session has been terminated.');
           }
 
-          console.log('✅ checkAuth: ADMIN role verified');
           setUser(userData);
         }
       } catch (error) {
@@ -85,56 +79,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
-      console.log('🚀 STARTING LOGIN PROCESS');
-      console.log('📧 Email:', email);
-      console.log('🔑 Password length:', password.length);
-
       setError(null);
       setIsLoading(true);
 
       const response = await authAPI.login(email, password);
 
-      console.log('✅ AUTHENTICATION SUCCESSFUL!');
-      console.log('📦 Raw response:', response);
-      console.log('🔍 Response type:', typeof response);
-      console.log('🔍 Response keys:', Object.keys(response));
-      console.log('🔍 Response data:', JSON.stringify(response, null, 2));
-
       // Handle different response formats
       let token, user;
 
-      console.log('🔍 Checking for token in different formats...');
-
       if (response.jwt) {
-        console.log('✅ Found standard Strapi format (response.jwt)');
         token = response.jwt;
         user = response.user;
       } else if (response.data?.token) {
-        console.log('✅ Found admin panel format (response.data.token)');
         token = response.data.token;
         user = response.data.user;
       } else if (response.token) {
-        console.log('✅ Found alternative format (response.token)');
         token = response.token;
         user = response.user;
       } else {
-        console.error('❌ Unexpected response format - no token found');
-        console.error('❌ Response structure:', JSON.stringify(response, null, 2));
+        console.error('Unexpected response format - no token found');
         throw new Error('Invalid response format from server - no authentication token found');
       }
 
-      console.log('✅ Token extracted successfully:', token ? 'YES' : 'NO');
-      console.log('✅ User extracted successfully:', user ? 'YES' : 'NO');
-      console.log('👤 User data:', user);
-
-      // ⭐ ROLE-BASED ACCESS CONTROL CHECK
-      console.log('🔐 Checking role_custom field:', user?.role_custom);
-
+      // ROLE-BASED ACCESS CONTROL CHECK
       if (!user.role_custom || user.role_custom !== 'ADMIN') {
-        console.log('❌ ACCESS DENIED: User role is not ADMIN');
-        console.log('❌ User role_custom value:', user.role_custom || 'undefined');
-        console.log('❌ User will NOT be logged in');
-
         // Show toast notification for access denied
         toast.error('Access Denied: Only administrators can access this dashboard. Please contact your system administrator.', {
           duration: 5000,
@@ -144,15 +112,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error('Access denied. Only administrators can access this dashboard. Please contact your system administrator.');
       }
 
-      console.log('✅ ADMIN role verified - user is authorized');
-      console.log('✅ Proceeding with login...');
-
       // Store JWT token
       localStorage.setItem('jwt_token', token);
       localStorage.setItem('user', JSON.stringify(user));
-
-      console.log('💾 Token and user stored in localStorage');
-      console.log('🔄 Setting user in context...');
 
       setUser(user);
 
@@ -162,15 +124,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         position: 'top-center'
       });
 
-      console.log('✅ LOGIN PROCESS COMPLETED SUCCESSFULLY');
-
     } catch (error: any) {
-      console.error('❌ LOGIN FAILED IN CONTEXT');
-      console.error('❌ Error object:', error);
-      console.error('❌ Error response:', error.response);
-      console.error('❌ Error response data:', error.response?.data);
-      console.error('❌ Error response status:', error.response?.status);
-      console.error('❌ Error response text:', error.response?.statusText);
+      console.error('Login failed:', error);
 
       // Handle different error formats
       const errorMessage = error.response?.data?.error?.message ||
@@ -178,12 +133,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         error.message ||
         'Login failed';
 
-      console.log('❌ Extracted error message:', errorMessage);
       setError(errorMessage);
       throw error;
     } finally {
       setIsLoading(false);
-      console.log('🏁 LOGIN PROCESS FINISHED (loading: false)');
     }
   };
 

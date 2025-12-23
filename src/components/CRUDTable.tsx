@@ -14,7 +14,6 @@ import {
 } from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import {
   Table,
   TableBody,
@@ -23,14 +22,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,17 +54,6 @@ export function CRUDTable<TData, TValue>({
   searchPlaceholder = "Search...",
   addButtonText = "Add New",
 }: CRUDTableProps<TData, TValue>) {
-  console.log('🔍 [CRUDTable] Component props received:', {
-    title,
-    dataLength: data.length,
-    hasData: data.length > 0,
-    columnsCount: columns.length,
-    hasOnEdit: !!onEdit,
-    hasOnDelete: !!onDelete,
-    hasOnAdd: !!onAdd,
-    dataSample: data.slice(0, 1)
-  });
-
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
@@ -81,16 +61,9 @@ export function CRUDTable<TData, TValue>({
   const actionColumn: ColumnDef<TData> = {
     id: 'actions',
     enableHiding: false,
-    header: () => {
-      console.log('🔍 [CRUDTable] Action column header being rendered');
-      return <span className="sr-only">Actions</span>;
-    },
+    header: () => <span className="sr-only">Actions</span>,
     cell: ({ row }) => {
       const item = row.original;
-      console.log('🔍 [CRUDTable] Action cell rendering for item:', item, {
-        hasOnEdit: !!onEdit,
-        hasOnDelete: !!onDelete
-      });
 
       return (
         <DropdownMenu>
@@ -98,7 +71,6 @@ export function CRUDTable<TData, TValue>({
             <Button
               variant="ghost"
               className="h-8 w-8 p-0"
-              onClick={() => console.log('🔍 [CRUDTable] Dropdown trigger clicked for:', item)}
             >
               <span className="sr-only">Open menu</span>
               <MoreHorizontal className="h-4 w-4" />
@@ -106,12 +78,7 @@ export function CRUDTable<TData, TValue>({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {onEdit && (
-              <DropdownMenuItem
-                onClick={() => {
-                  console.log('✏️ [CRUDTable] Edit clicked for:', item);
-                  onEdit(item);
-                }}
-              >
+              <DropdownMenuItem onClick={() => onEdit(item)}>
                 <Edit className="mr-2 h-4 w-4" />
                 Edit
               </DropdownMenuItem>
@@ -120,10 +87,7 @@ export function CRUDTable<TData, TValue>({
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={() => {
-                    console.log('🗑️ [CRUDTable] Delete clicked for:', item);
-                    onDelete(item);
-                  }}
+                  onClick={() => onDelete(item)}
                   className="text-red-600"
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
@@ -138,12 +102,6 @@ export function CRUDTable<TData, TValue>({
   };
 
   const tableColumns = [...columns, actionColumn];
-  console.log('🔍 [CRUDTable] Final columns array:', {
-    originalColumns: columns.length,
-    totalColumns: tableColumns.length,
-    columnIds: tableColumns.map(col => col.id || 'unknown'),
-    hasActionColumn: tableColumns.some(col => col.id === 'actions')
-  });
 
   const table = useReactTable({
     data,
@@ -160,13 +118,6 @@ export function CRUDTable<TData, TValue>({
       columnFilters,
       globalFilter,
     },
-  });
-
-  console.log('🔍 [CRUDTable] Table created with:', {
-    rowCount: table.getRowModel().rows.length,
-    columnCount: table.getAllColumns().length,
-    columnHeaders: table.getHeaderGroups()[0]?.headers.map(h => h.column.id) || [],
-    hasData: data.length > 0
   });
 
   return (

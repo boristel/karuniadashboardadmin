@@ -220,13 +220,7 @@ export default function VehicleTypesPage() {
                     options={vehicleGroupOptions}
                     value={typeof formData.vehicle_group === 'string' ? formData.vehicle_group : ''}
                     onChange={(value) => {
-                      console.log('VehicleTypes onChange - selected value:', value);
-                      console.log('Before update - formData:', formData);
-                      setFormData(prev => {
-                        const newFormData = { ...prev, vehicle_group: value };
-                        console.log('After update - newFormData:', newFormData);
-                        return newFormData;
-                      });
+                      setFormData(prev => ({ ...prev, vehicle_group: value }));
                     }}
                     placeholder="Select vehicle group..."
                     searchPlaceholder="Search groups..."

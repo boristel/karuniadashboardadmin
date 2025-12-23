@@ -52,51 +52,24 @@ export default function VehicleGroupsPage() {
 
   // Fetch data from API
   const fetchData = async () => {
-    console.log('🚀 [VehicleGroups] fetchData started');
     try {
       setLoading(true);
-      console.log('📡 [VehicleGroups] Making parallel API calls...');
 
       const [vehicleGroupsResponse, categoriesResponse] = await Promise.all([
         vehicleGroupsAPI.find(),
         categoriesAPI.find(),
       ]);
 
-      console.log('📊 [VehicleGroups] API Responses received:', {
-        vehicleGroups: {
-          hasData: !!vehicleGroupsResponse?.data,
-          dataCount: vehicleGroupsResponse?.data?.length || 0,
-          keys: vehicleGroupsResponse
-            ? Object.keys(vehicleGroupsResponse)
-            : 'null',
-        },
-        categories: {
-          hasData: !!categoriesResponse?.data,
-          dataCount: categoriesResponse?.data?.length || 0,
-          keys: categoriesResponse ? Object.keys(categoriesResponse) : 'null',
-        },
-      });
-
       const vehicleGroupsData = vehicleGroupsResponse.data || [];
       const categoriesData = categoriesResponse.data || [];
 
-      console.log('📋 [VehicleGroups] Setting state:', {
-        vehicleGroupsCount: vehicleGroupsData.length,
-        categoriesCount: categoriesData.length,
-        vehicleGroupsSample: vehicleGroupsData.slice(0, 2),
-        categoriesSample: categoriesData.slice(0, 2),
-      });
-
       setData(vehicleGroupsData);
       setCategories(categoriesData);
-
-      console.log('✅ [VehicleGroups] fetchData completed successfully');
     } catch (error) {
-      console.error('❌ [VehicleGroups] fetchData failed:', error);
+      console.error('Failed to load vehicle groups:', error);
       toast.error('Failed to load vehicle groups');
     } finally {
       setLoading(false);
-      console.log('⏳ [VehicleGroups] setLoading(false) - loading complete');
     }
   };
 

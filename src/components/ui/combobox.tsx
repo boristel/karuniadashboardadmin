@@ -57,13 +57,10 @@ export function Combobox({
   }, [open]);
 
   const handleSelectOption = React.useCallback((optionValue: string) => {
-    console.log('Combobox handleSelectOption called with:', optionValue);
     onChange(optionValue);
     setOpen(false);
     setSearchTerm("");
   }, [onChange]);
-
-  console.log('Combobox render - value:', value, 'currentValue:', currentValue, 'options:', options);
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -107,7 +104,6 @@ export function Combobox({
             <div className="max-h-[300px] overflow-y-auto p-1">
               {filteredOptions.map((option) => {
                 const isSelected = currentValue === option.value;
-                console.log('Option:', option, 'isSelected:', isSelected);
                 return (
                   <div
                     key={option.value}
@@ -118,12 +114,10 @@ export function Combobox({
                     onMouseDown={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      console.log('MouseDown option:', option.value);
                     }}
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      console.log('Clicked option:', option.value);
                       handleSelectOption(option.value);
                     }}
                   >
