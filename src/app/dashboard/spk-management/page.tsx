@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -108,19 +108,11 @@ export default function SpkManagementPage() {
     editable: false,
   });
 
-  // Server-side state
-  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
-    page: 0,
-    pageSize: 25,
-  });
-
-  const [sortModel, setSortModel] = useState<GridSortModel>([
-    { field: 'createdAt', sort: 'desc' },
-  ]);
-
-  const [filterModel, setFilterModel] = useState<GridFilterModel>({ items: [] });
+  // Track if component is mounted to prevent initial render updates
+  const isMounted = useRef(false);
 
   // Use custom hook for SPK data with React Query
+  // The hook manages its own internal state for pagination, sorting, and filtering
   const {
     spks,
     loading,
@@ -134,13 +126,30 @@ export default function SpkManagementPage() {
     updateSpk,
     isUpdating,
   } = useSpkData({
-    page: paginationModel.page + 1, // MUI uses 0-based, API uses 1-based
-    pageSize: paginationModel.pageSize,
-    sortField: sortModel[0]?.field,
-    sortOrder: sortModel[0]?.sort || 'desc',
-    filterField: filterModel.items?.[0]?.field,
-    filterValue: filterModel.items?.[0]?.value as string,
+    page: 1,
+    pageSize: 25,
+    sortField: 'createdAt',
+    sortOrder: 'desc',
   });
+
+  // Derived state for MUI DataGrid (convert 1-based to 0-based for page)
+  const paginationModel: GridPaginationModel = useMemo(
+    () => ({
+      page: Math.max(0, pagination.page - 1), // Convert to 0-based
+      pageSize: pagination.pageSize,
+    }),
+    [pagination.page, pagination.pageSize]
+  );
+
+  const sortModel: GridSortModel = useMemo(
+    () => [{ field: 'createdAt', sort: 'desc' }], // Default sort, will be overridden by user interaction
+    []
+  );
+
+  const filterModel: GridFilterModel = useMemo(
+    () => ({ items: [] }), // Empty filter model
+    []
+  );
 
   // Handle edit SPK
   const handleEditSpk = useCallback((spk: SPK) => {
@@ -505,35 +514,24 @@ export default function SpkManagementPage() {
 
   // Handle pagination change
   const handlePaginationModelChange = useCallback((newModel: GridPaginationModel) => {
-    // Only update state if value actually changed to avoid render-phase updates
-    if (newModel.page !== paginationModel.page || newModel.pageSize !== paginationModel.pageSize) {
-      setPaginationModel(newModel);
-    }
+    setPaginationModel(newModel);
     setPage(newModel.page + 1); // Convert to 1-based
     setPageSize(newModel.pageSize);
-  }, [setPage, setPageSize, paginationModel]);
+  }, [setPage, setPageSize]);
 
   // Handle sort change
   const handleSortModelChange = useCallback((newModel: GridSortModel) => {
-    // Only update state if value actually changed to avoid render-phase updates
-    if (JSON.stringify(newModel) !== JSON.stringify(sortModel)) {
-      setSortModel(newModel);
-    }
     if (newModel[0]) {
       setSort(newModel[0].field, newModel[0].sort || 'desc');
     }
-  }, [setSort, sortModel]);
+  }, [setSort]);
 
   // Handle filter change
   const handleFilterModelChange = useCallback((newModel: GridFilterModel) => {
-    // Only update state if value actually changed to avoid render-phase updates
-    if (JSON.stringify(newModel) !== JSON.stringify(filterModel)) {
-      setFilterModel(newModel);
-    }
     if (newModel.items && newModel.items[0]) {
       setFilter(newModel.items[0].field, String(newModel.items[0].value));
     }
-  }, [setFilter, filterModel]);
+  }, [setFilter]);
 
   // Calculate statistics
   const stats = useMemo(() => {
@@ -608,8 +606,23 @@ export default function SpkManagementPage() {
             </CardHeader>
             <CardContent>
               {loading && spks.length === 0 ? (
-                <div className="flex items-center justify-center py-8">
+                <div className="flex flex-col items-center justify-center py-8 space-y-4">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  <p className="text-sm text-gray-500">Loading SPK data...</p>
+                </div>
+              ) : error ? (
+                <div className="flex flex-col items-center justify-center py-8 space-y-4">
+                  <div className="text-red-500 text-sm">
+                    {error instanceof Error ? error.message : 'Failed to load SPK data'}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => refetch()}
+                  >
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Retry
+                  </Button>
                 </div>
               ) : spks.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">

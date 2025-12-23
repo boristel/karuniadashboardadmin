@@ -8,6 +8,7 @@ const API_TOKEN = process.env.STRAPI_API_TOKEN;
 // Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 60000, // 60 second default timeout for all requests
   headers: {
     'Content-Type': 'application/json',
   },
@@ -40,11 +41,25 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // Only redirect to login on actual 401 responses from the server
+    // Don't redirect on timeout, network errors, or CORS issues
+    const isActual401 =
+      error.response?.status === 401 &&
+      error.code !== 'ECONNABORTED' &&
+      error.message !== 'Network Error' &&
+      !error.message.includes('timeout') &&
+      error.response?.data !== undefined;
+
+    if (isActual401) {
+      console.warn('[API] 401 Unauthorized - clearing session and redirecting to login');
       // Unauthorized - clear token and redirect to login
       localStorage.removeItem('jwt_token');
       localStorage.removeItem('user');
       window.location.href = '/auth/login';
+    } else if (error.code === 'ECONNABORTED') {
+      console.error('[API] Request timeout:', error.config?.url);
+    } else if (error.message === 'Network Error') {
+      console.error('[API] Network error:', error.config?.url);
     }
     return Promise.reject(error);
   }

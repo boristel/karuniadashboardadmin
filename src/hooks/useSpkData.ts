@@ -3,13 +3,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { spkAPI } from '@/services/api';
+import { useState, useCallback } from 'react';
 
 // Types for SPK with pagination
 interface SpkPaginationParams {
-  page?: number;
-  pageSize?: number;
-  sortField?: string;
-  sortOrder?: 'asc' | 'desc';
+  page: number;
+  pageSize: number;
+  sortField: string;
+  sortOrder: 'asc' | 'desc';
   filterField?: string;
   filterValue?: string;
   startDate?: string;
@@ -48,8 +49,21 @@ interface UseSpkDataResult {
   isUpdating: boolean;
 }
 
-export function useSpkData(params: SpkPaginationParams = {}): UseSpkDataResult {
+const DEFAULT_PARAMS: Omit<SpkPaginationParams, 'startDate' | 'endDate'> = {
+  page: 1,
+  pageSize: 25,
+  sortField: 'createdAt',
+  sortOrder: 'desc',
+};
+
+export function useSpkData(initialParams: Partial<SpkPaginationParams> = {}): UseSpkDataResult {
   const queryClient = useQueryClient();
+
+  // Local state for pagination, sort, and filter parameters
+  const [params, setParams] = useState<SpkPaginationParams>({
+    ...DEFAULT_PARAMS,
+    ...initialParams,
+  });
 
   // Build query key for caching and invalidation
   const queryKey = ['spks', params];
@@ -63,28 +77,7 @@ export function useSpkData(params: SpkPaginationParams = {}): UseSpkDataResult {
       twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
       const defaultStartDate = twoMonthsAgo.toISOString().split('T')[0];
 
-      const apiParams: any = {
-        sort: {},
-        populate: {
-          salesProfile: {
-            fields: ['id', 'documentId', 'surename', 'namasupervisor', 'email', 'phonenumber', 'city', 'address'],
-          },
-          detailInfo: true,
-          unitInfo: {
-            populate: {
-              vehicleType: {
-                fields: ['name'],
-              },
-              color: {
-                fields: ['colorname'],
-              },
-            },
-          },
-          ktpPaspor: true,
-          kartuKeluarga: true,
-          selfie: true,
-        },
-      };
+      const apiParams: any = {};
 
       // Pagination
       const page = params.page || 1;
@@ -93,36 +86,33 @@ export function useSpkData(params: SpkPaginationParams = {}): UseSpkDataResult {
       apiParams['pagination[pageSize]'] = pageSize;
       apiParams['pagination[start]'] = (page - 1) * pageSize;
 
-      // Sorting (server-side)
-      if (params.sortField) {
-        const sortOrder = params.sortOrder || 'desc';
-        apiParams.sort[`sort[${params.sortField}]`] = sortOrder === 'asc' ? 'asc' : 'desc';
-      } else {
-        apiParams.sort['sort[createdAt]'] = 'desc'; // Default sort
-      }
+      // Sorting (server-side) - fixed syntax
+      const sortField = params.sortField || 'createdAt';
+      const sortOrder = params.sortOrder || 'desc';
+      apiParams[`sort[${sortField}]`] = sortOrder;
+
+      // Populate nested relations - use Strapi v4 format
+      apiParams['populate'] = 'salesProfile,detailInfo,unitInfo,ktpPaspor,kartuKeluarga,selfie';
+      apiParams['populate[unitInfo]'] = 'vehicleType,color';
 
       // Filtering by date range
       const startDate = params.startDate || defaultStartDate;
       const endDate = params.endDate || new Date().toISOString().split('T')[0];
-      apiParams.filters = {
-        tanggal: {
-          $gte: startDate,
-          $lte: endDate,
-        },
-      };
+      apiParams['filters[tanggal][$gte]'] = startDate;
+      apiParams['filters[tanggal][$lte]'] = endDate;
 
       // Additional field filter
       if (params.filterField && params.filterValue) {
-        apiParams.filters[params.filterField] = {
-          $containsi: params.filterValue,
-        };
+        apiParams[`filters[${params.filterField}][$containsi]`] = params.filterValue;
       }
 
       const response = await spkAPI.find(apiParams);
       return response;
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes - data stays fresh
-    gcTime: 10 * 60 * 1000, // 10 minutes - cache duration
+    staleTime: 2 * 60 * 1000, // 2 minutes - reduced for fresher data
+    gcTime: 5 * 60 * 1000, // 5 minutes - cache duration
+    retry: 1, // Only retry once to avoid hanging
+    retryDelay: 1000, // 1 second between retries
   });
 
   // Extract data and pagination info
@@ -150,48 +140,26 @@ export function useSpkData(params: SpkPaginationParams = {}): UseSpkDataResult {
     },
   });
 
-  const setPage = (page: number) => {
-    // This will trigger a re-fetch with new params
-    queryClient.setQueryData(queryKey, (old: any) => ({
-      ...old,
-      page,
-    }));
-  };
+  // Parameter update functions
+  const setPage = useCallback((page: number) => {
+    setParams(prev => ({ ...prev, page }));
+  }, []);
 
-  const setPageSize = (pageSize: number) => {
-    queryClient.setQueryData(queryKey, (old: any) => ({
-      ...old,
-      pageSize,
-      page: 1, // Reset to first page when changing page size
-    }));
-  };
+  const setPageSize = useCallback((pageSize: number) => {
+    setParams(prev => ({ ...prev, pageSize, page: 1 })); // Reset to first page when changing page size
+  }, []);
 
-  const setSort = (field: string, order: 'asc' | 'desc') => {
-    queryClient.setQueryData(queryKey, (old: any) => ({
-      ...old,
-      sortField: field,
-      sortOrder: order,
-      page: 1, // Reset to first page when sorting
-    }));
-  };
+  const setSort = useCallback((field: string, order: 'asc' | 'desc') => {
+    setParams(prev => ({ ...prev, sortField: field, sortOrder: order, page: 1 })); // Reset to first page when sorting
+  }, []);
 
-  const setFilter = (field: string, value: string) => {
-    queryClient.setQueryData(queryKey, (old: any) => ({
-      ...old,
-      filterField: field,
-      filterValue: value,
-      page: 1, // Reset to first page when filtering
-    }));
-  };
+  const setFilter = useCallback((field: string, value: string) => {
+    setParams(prev => ({ ...prev, filterField: field, filterValue: value, page: 1 })); // Reset to first page when filtering
+  }, []);
 
-  const setDateRange = (startDate: string, endDate: string) => {
-    queryClient.setQueryData(queryKey, (old: any) => ({
-      ...old,
-      startDate,
-      endDate,
-      page: 1, // Reset to first page when changing date range
-    }));
-  };
+  const setDateRange = useCallback((startDate: string, endDate: string) => {
+    setParams(prev => ({ ...prev, startDate, endDate, page: 1 })); // Reset to first page when changing date range
+  }, []);
 
   const updateSpk = async (id: string, updateData: any) => {
     await updateMutation.mutateAsync({ id, updateData });
