@@ -116,6 +116,7 @@ export default function GoogleMapsViewer({
     if (mapRef.current && !map) {
       loadGoogleMaps(initMap);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map]);
 
   return (

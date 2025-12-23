@@ -207,6 +207,7 @@ export default function SalesMonitoringPage() {
     if (!bounds.isEmpty()) {
       map.fitBounds(bounds);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, salesData, selectedBranch]);
 
   useEffect(() => {

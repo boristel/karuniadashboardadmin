@@ -20,6 +20,7 @@ export function useApi<T>(apiCall: () => Promise<StrapiListResponse<T>>, deps: a
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 
   useEffect(() => {
