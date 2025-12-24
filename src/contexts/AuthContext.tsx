@@ -44,8 +44,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const storedUser = localStorage.getItem('user');
 
         if (token && storedUser) {
-          // Verify token is still valid
-          const userData = await authAPI.me();
+          // Verify token is still valid with timeout
+          const userData = await Promise.race([
+            authAPI.me(),
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('Auth check timeout')), 10000)
+            ),
+          ]) as any;
 
           // ROLE-BASED ACCESS CONTROL CHECK
           if (!userData.role_custom || userData.role_custom !== 'ADMIN') {
@@ -69,7 +74,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Clear invalid session
         localStorage.removeItem('jwt_token');
         localStorage.removeItem('user');
+        // Always clear loading state, even on error
+        setIsLoading(false);
       } finally {
+        // Always clear loading state
         setIsLoading(false);
       }
     };
