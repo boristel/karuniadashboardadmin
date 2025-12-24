@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -61,7 +61,9 @@ export default function SalesMonitoringPage() {
   const [selectedBranch, setSelectedBranch] = useState<string>('all');
   const [map, setMap] = useState<any | null>(null);
   const [markers, setMarkers] = useState<any[]>([]);
+  const [mapInitialized, setMapInitialized] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
+  const MAP_CONTAINER_ID = 'sales-monitoring-map-container';
 
   const branches = [
     { value: 'all', label: 'All Branches' },
@@ -105,18 +107,33 @@ export default function SalesMonitoringPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const initMap = useCallback(() => {
-    if (!mapRef.current || typeof window === 'undefined') return;
+  // Use a ref to track if map was initialized to avoid dependency issues
+  const mapInitRef = useRef(false);
 
-    // Ensure Google Maps API is loaded
-    if (!window.google || !window.google.maps) {
-      console.error('Google Maps API not loaded');
+  const initMap = useCallback(() => {
+    // Prevent duplicate initialization using ref instead of state
+    if (mapInitRef.current) {
+      console.log('[SalesMonitoring] Map already initialized, skipping...');
       return;
     }
 
-    // Use requestAnimationFrame to ensure this runs after React's render cycle
-    requestAnimationFrame(() => {
-      const mapInstance = new window.google.maps.Map(mapRef.current!, {
+    // Check if Google Maps API is loaded
+    if (typeof window === 'undefined' || !window.google || !window.google.maps) {
+      console.error('[SalesMonitoring] Google Maps API not loaded yet');
+      return;
+    }
+
+    // Try to get the map container by ID
+    const mapContainer = document.getElementById(MAP_CONTAINER_ID);
+    if (!mapContainer) {
+      console.warn('[SalesMonitoring] Map container element not found (ID:', MAP_CONTAINER_ID, ')');
+      return;
+    }
+
+    console.log('[SalesMonitoring] Initializing Google Maps...');
+
+    try {
+      const mapInstance = new window.google.maps.Map(mapContainer, {
         zoom: 11,
         center: { lat: -6.2088, lng: 106.8456 }, // Jakarta center
         mapTypeControl: true,
@@ -124,8 +141,13 @@ export default function SalesMonitoringPage() {
         fullscreenControl: true,
       });
 
+      console.log('[SalesMonitoring] Google Maps initialized successfully');
       setMap(mapInstance);
-    });
+      setMapInitialized(true);
+      mapInitRef.current = true;
+    } catch (error) {
+      console.error('[SalesMonitoring] Failed to initialize Google Maps:', error);
+    }
   }, []);
 
   const updateMarkers = useCallback(() => {
@@ -211,28 +233,50 @@ export default function SalesMonitoringPage() {
   }, [map, salesData, selectedBranch]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.google && window.google.maps) {
-      initMap();
-    }
-  }, [initMap]);
-
-  useEffect(() => {
     updateMarkers();
   }, [updateMarkers]);
 
   const loadGoogleMaps = useCallback(() => {
     if (!GOOGLE_MAPS_API_KEY) {
-      console.error('Google Maps API key is not configured');
+      console.error('[SalesMonitoring] Google Maps API key is not configured');
+      toast.error('Google Maps API key is not configured');
       return;
     }
 
-    GoogleMapsLoader.load(GOOGLE_MAPS_API_KEY, initMap)
-      .catch(() => {
-        console.error('Failed to load Google Maps API');
+    console.log('[SalesMonitoring] Loading Google Maps API...');
+    GoogleMapsLoader.load(GOOGLE_MAPS_API_KEY)
+      .then(() => {
+        console.log('[SalesMonitoring] Google Maps API loaded, waiting for DOM...');
+        // Try to initialize map with retries
+        let retries = 0;
+        const maxRetries = 20; // Try for up to 10 seconds (20 * 500ms)
+
+        const tryInitMap = () => {
+          const mapContainer = document.getElementById(MAP_CONTAINER_ID);
+          if (mapContainer) {
+            console.log('[SalesMonitoring] Map container found! Initializing...');
+            initMap();
+          } else if (retries < maxRetries) {
+            retries++;
+            console.log(`[SalesMonitoring] Map container not found, retry ${retries}/${maxRetries}...`);
+            setTimeout(tryInitMap, 500);
+          } else {
+            console.error('[SalesMonitoring] Failed to find map container after', maxRetries, 'retries');
+            toast.error('Failed to initialize map');
+          }
+        };
+
+        tryInitMap();
+      })
+      .catch((error) => {
+        console.error('[SalesMonitoring] Failed to load Google Maps API:', error);
+        toast.error('Failed to load Google Maps');
       });
   }, [initMap]);
 
-  useEffect(() => {
+  // Load Google Maps after component is mounted and DOM is ready
+  useLayoutEffect(() => {
+    console.log('[SalesMonitoring] Component mounted, loading Google Maps...');
     loadGoogleMaps();
   }, [loadGoogleMaps]);
 
@@ -352,6 +396,7 @@ export default function SalesMonitoringPage() {
               </CardHeader>
               <CardContent>
                 <div
+                  id={MAP_CONTAINER_ID}
                   ref={mapRef}
                   style={{ width: '100%', height: '500px' }}
                   className="bg-gray-100 rounded-lg"

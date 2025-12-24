@@ -308,33 +308,18 @@ export const articlesAPI = createCRUDAPI('articles');
 export const salesMonitoringAPI = {
   // Get all sales profiles with their SPK data and populated relationships
   getSalesProfilesWithSPK: async () => {
-    const populateParams = [
-      'populate[photo_profile]',
-      'populate[spks][populate][unitInfo][populate][vehicleType]',
-      'populate[spks][populate][unitInfo][populate][color]',
-      'populate[spks][populate][detailInfo]',
-      'populate[spks][populate][paymentInfo]'
-    ];
-
-    try {
-      const queryString = new URLSearchParams();
-      populateParams.forEach(param => queryString.append(param, ''));
-      queryString.append('filters[blocked]', 'false');
-      queryString.append('sort', 'updatedAt:desc');
-
-      const response = await api.get(`/sales-profiles?${queryString.toString()}`);
-      return response.data;
-    } catch (error: any) {
-      console.error('[SalesMonitoring] API Error:', error.response?.status, error.response?.data);
-      // Try simpler populate if complex one fails
-      try {
-        const response = await api.get('/sales-profiles?populate=*');
-        return response.data;
-      } catch (fallbackError: any) {
-        console.error('[SalesMonitoring] Fallback API Error:', fallbackError.response?.status, fallbackError.response?.data);
-        throw fallbackError;
+    // Use array format for Strapi v4 populate
+    const response = await api.get('/sales-profiles', {
+      params: {
+        // Populate photo_profile and spks relations (top-level only)
+        populate: ['photo_profile', 'spks'],
+        // Filter only non-blocked sales profiles
+        'filters[blocked]': false,
+        // Sort by most recently updated
+        'sort': 'updatedAt:desc',
       }
-    }
+    });
+    return response.data;
   },
 
   // Get sales profiles filtered by online status

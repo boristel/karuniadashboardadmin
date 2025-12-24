@@ -514,7 +514,6 @@ export default function SpkManagementPage() {
 
   // Handle pagination change
   const handlePaginationModelChange = useCallback((newModel: GridPaginationModel) => {
-    setPaginationModel(newModel);
     setPage(newModel.page + 1); // Convert to 1-based
     setPageSize(newModel.pageSize);
   }, [setPage, setPageSize]);
