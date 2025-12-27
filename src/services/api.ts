@@ -273,6 +273,9 @@ export const createCRUDAPI = (endpoint: string) => ({
       const response = await api.get(`/${endpoint}`, {
         params: {
           populate: '*',
+          // Set default pagination to 50 records per page (can be overridden by filters)
+          'pagination[pageSize]': 50,
+          'pagination[page]': 1,
           ...filters,
         },
       });

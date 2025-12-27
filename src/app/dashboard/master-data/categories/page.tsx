@@ -36,9 +36,24 @@ interface Category {
   updatedAt: string;
 }
 
+interface PaginationMeta {
+  page: number;
+  pageSize: number;
+  pageCount: number;
+  total: number;
+}
+
 export default function CategoriesPage() {
   const [data, setData] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState<PaginationMeta>({
+    page: 1,
+    pageSize: 50,
+    pageCount: 1,
+    total: 0,
+  });
+  const [searchTerm, setSearchTerm] = useState('');
+
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Category | null>(null);
@@ -49,11 +64,20 @@ export default function CategoriesPage() {
   });
 
   // Fetch data from API
-  const fetchData = async () => {
+  const fetchData = async (page = 1, pageSize = 50, search = '') => {
     try {
       setLoading(true);
-      const response = await categoriesAPI.find();
+      const response = await categoriesAPI.find({
+        'pagination[page]': page,
+        'pagination[pageSize]': pageSize,
+        ...(search && { 'filters[name][$containsi]': search }),
+      });
       setData(response.data || []);
+
+      // Update pagination metadata from response
+      if (response.meta?.pagination) {
+        setPagination(response.meta.pagination);
+      }
     } catch (error) {
       console.error('Failed to fetch categories:', error);
       toast.error('Failed to load categories');
@@ -63,7 +87,7 @@ export default function CategoriesPage() {
   };
 
   useEffect(() => {
-    fetchData();
+    fetchData(1, 50, '');
   }, []);
 
   const columns: ColumnDef<Category>[] = [
@@ -132,7 +156,7 @@ export default function CategoriesPage() {
       try {
         await categoriesAPI.delete(item.documentId);
         toast.success('Category deleted successfully');
-        fetchData(); // Refetch data
+        fetchData(pagination.page, pagination.pageSize, searchTerm);
       } catch (error) {
         console.error('Failed to delete category:', error);
         toast.error('Failed to delete category');
@@ -167,11 +191,24 @@ export default function CategoriesPage() {
       setIsEditDialogOpen(false);
       setIsAddDialogOpen(false);
       setEditingItem(null);
-      fetchData(); // Refetch data
+      fetchData(pagination.page, pagination.pageSize, searchTerm);
     } catch (error) {
       console.error('Failed to save category:', error);
       toast.error('Failed to save category');
     }
+  };
+
+  const handlePageChange = (page: number) => {
+    fetchData(page, pagination.pageSize, searchTerm);
+  };
+
+  const handlePageSizeChange = (pageSize: number) => {
+    fetchData(1, pageSize, searchTerm); // Reset to page 1 when changing page size
+  };
+
+  const handleSearchChange = (search: string) => {
+    setSearchTerm(search);
+    fetchData(1, pagination.pageSize, search); // Reset to page 1 when searching
   };
 
   return (
@@ -186,8 +223,13 @@ export default function CategoriesPage() {
             onAdd={handleAdd}
             onEdit={handleEdit}
             onDelete={handleDelete}
-            searchPlaceholder="Search categories..."
+            searchPlaceholder="Search categories by name..."
             addButtonText="Add Category"
+            pagination={pagination}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+            onSearchChange={handleSearchChange}
+            isLoading={loading}
           />
 
           {/* Add/Edit Dialog */}

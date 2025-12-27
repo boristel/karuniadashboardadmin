@@ -1,16 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
   getSortedRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
   flexRender,
   ColumnDef,
   SortingState,
-  ColumnFiltersState,
 } from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,7 +26,21 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Plus, Edit, Trash2, MoreHorizontal, Search } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Plus, Edit, Trash2, MoreHorizontal, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+
+interface PaginationMeta {
+  page: number;
+  pageSize: number;
+  pageCount: number;
+  total: number;
+}
 
 interface CRUDTableProps<TData, TValue> {
   data: TData[];
@@ -41,9 +52,33 @@ interface CRUDTableProps<TData, TValue> {
   onDelete?: (item: TData) => void;
   searchPlaceholder?: string;
   addButtonText?: string;
+  // Server-side pagination props
+  pagination?: PaginationMeta;
+  onPageChange?: (page: number) => void;
+  onPageSizeChange?: (pageSize: number) => void;
+  // Server-side search prop
+  onSearchChange?: (searchTerm: string) => void;
+  isLoading?: boolean;
 }
 
-export function CRUDTable<TData, TValue>({
+// Debounce hook for search input
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
+export const CRUDTable = React.memo(function CRUDTable<TData, TValue>({
   data,
   columns,
   title,
@@ -53,10 +88,30 @@ export function CRUDTable<TData, TValue>({
   onDelete,
   searchPlaceholder = "Search...",
   addButtonText = "Add New",
+  pagination,
+  onPageChange,
+  onPageSizeChange,
+  onSearchChange,
+  isLoading = false,
 }: CRUDTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [globalFilter, setGlobalFilter] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const isInitializedRef = useRef(false);
+
+  // Debounce search term (300ms delay)
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
+  // Trigger search change when debounced value changes (only after initial render)
+  useEffect(() => {
+    if (!isInitializedRef.current) {
+      isInitializedRef.current = true;
+      return;
+    }
+    if (onSearchChange) {
+      onSearchChange(debouncedSearchTerm);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearchTerm]);
 
   const actionColumn: ColumnDef<TData> = {
     id: 'actions',
@@ -108,17 +163,13 @@ export function CRUDTable<TData, TValue>({
     columns: tableColumns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    onGlobalFilterChange: setGlobalFilter,
     state: {
       sorting,
-      columnFilters,
-      globalFilter,
     },
   });
+
+  const pageSizeOptions = [10, 25, 50, 100];
 
   return (
     <div className="space-y-4">
@@ -135,16 +186,46 @@ export function CRUDTable<TData, TValue>({
         )}
       </div>
 
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center justify-between gap-4">
+        {/* Search Bar */}
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
           <Input
             placeholder={searchPlaceholder}
-            value={globalFilter ?? ''}
-            onChange={(e) => setGlobalFilter(e.target.value)}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-8"
           />
+          {isLoading && (
+            <div className="absolute right-2 top-2.5 h-4 w-4">
+              <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
+            </div>
+          )}
         </div>
+
+        {/* Records Per Page Selector */}
+        {pagination && onPageSizeChange && (
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-gray-500">Show</span>
+            <Select
+              value={String(pagination.pageSize)}
+              onValueChange={(value) => onPageSizeChange(Number(value))}
+              disabled={isLoading}
+            >
+              <SelectTrigger className="w-[70px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {pageSizeOptions.map((size) => (
+                  <SelectItem key={size} value={String(size)}>
+                    {size}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="text-sm text-gray-500">per page</span>
+          </div>
+        )}
       </div>
 
       <div className="rounded-md border">
@@ -168,7 +249,16 @@ export function CRUDTable<TData, TValue>({
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
+            {isLoading ? (
+              <TableRow>
+                <TableCell
+                  colSpan={tableColumns.length}
+                  className="h-24 text-center text-gray-500"
+                >
+                  Loading...
+                </TableCell>
+              </TableRow>
+            ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
@@ -198,30 +288,46 @@ export function CRUDTable<TData, TValue>({
         </Table>
       </div>
 
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <div className="flex-1 text-sm text-gray-500">
-          Page {table.getState().pagination.pageIndex + 1} of{' '}
-          {table.getPageCount()}
-        </div>
-        <div className="space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            Next
-          </Button>
-        </div>
+      {/* Pagination Controls */}
+      <div className="flex items-center justify-between py-4">
+        {/* Records Info */}
+        {pagination && (
+          <div className="text-sm text-gray-500">
+            Showing {Math.min((pagination.page - 1) * pagination.pageSize + 1, pagination.total)} to{' '}
+            {Math.min(pagination.page * pagination.pageSize, pagination.total)} of{' '}
+            {pagination.total} records
+            {pagination.total > pagination.pageSize && (
+              <span className="ml-2">
+                (Page {pagination.page} of {pagination.pageCount})
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Pagination Buttons */}
+        {pagination && onPageChange && (
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange(pagination.page - 1)}
+              disabled={pagination.page <= 1 || isLoading}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange(pagination.page + 1)}
+              disabled={pagination.page >= pagination.pageCount || isLoading}
+            >
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
-}
+}) as typeof CRUDTable;

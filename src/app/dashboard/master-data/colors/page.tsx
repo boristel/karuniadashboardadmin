@@ -28,9 +28,24 @@ interface Color {
   publishedAt: string;
 }
 
+interface PaginationMeta {
+  page: number;
+  pageSize: number;
+  pageCount: number;
+  total: number;
+}
+
 export default function ColorsPage() {
   const [data, setData] = useState<Color[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState<PaginationMeta>({
+    page: 1,
+    pageSize: 50,
+    pageCount: 1,
+    total: 0,
+  });
+  const [searchTerm, setSearchTerm] = useState('');
+
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Color | null>(null);
@@ -38,12 +53,21 @@ export default function ColorsPage() {
     colorname: '',
   });
 
-  const fetchData = async () => {
+  const fetchData = async (page = 1, pageSize = 50, search = '') => {
     try {
       setLoading(true);
-      const response = await colorsAPI.find();
+      const response = await colorsAPI.find({
+        'pagination[page]': page,
+        'pagination[pageSize]': pageSize,
+        ...(search && { 'filters[colorname][$containsi]': search }),
+      });
       const colorsData = response.data || [];
       setData(colorsData);
+
+      // Update pagination metadata from response
+      if (response.meta?.pagination) {
+        setPagination(response.meta.pagination);
+      }
     } catch (error) {
       console.error('Failed to load colors:', error);
       toast.error('Failed to load colors');
@@ -53,7 +77,7 @@ export default function ColorsPage() {
   };
 
   useEffect(() => {
-    fetchData();
+    fetchData(1, 50, '');
   }, []);
 
   const columns: ColumnDef<Color>[] = [
@@ -114,11 +138,39 @@ export default function ColorsPage() {
       setIsEditDialogOpen(false);
       setIsAddDialogOpen(false);
       setEditingItem(null);
-      fetchData();
+      fetchData(pagination.page, pagination.pageSize, searchTerm);
     } catch (error) {
       console.error('Failed to save color:', error);
       toast.error('Failed to save color');
     }
+  };
+
+  const handleDelete = async (item: Color) => {
+    if (!confirm(`Are you sure you want to delete "${item.colorname}"?`)) {
+      return;
+    }
+
+    try {
+      await colorsAPI.delete(item.documentId);
+      toast.success('Color deleted successfully');
+      fetchData(pagination.page, pagination.pageSize, searchTerm);
+    } catch (error) {
+      console.error('Failed to delete color:', error);
+      toast.error('Failed to delete color');
+    }
+  };
+
+  const handlePageChange = (page: number) => {
+    fetchData(page, pagination.pageSize, searchTerm);
+  };
+
+  const handlePageSizeChange = (pageSize: number) => {
+    fetchData(1, pageSize, searchTerm); // Reset to page 1 when changing page size
+  };
+
+  const handleSearchChange = (search: string) => {
+    setSearchTerm(search);
+    fetchData(1, pagination.pageSize, search); // Reset to page 1 when searching
   };
 
   return (
@@ -132,8 +184,14 @@ export default function ColorsPage() {
             description="Manage available vehicle colors"
             onAdd={handleAdd}
             onEdit={handleEdit}
-            searchPlaceholder="Search colors..."
+            onDelete={handleDelete}
+            searchPlaceholder="Search colors by name..."
             addButtonText="Add Color"
+            pagination={pagination}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+            onSearchChange={handleSearchChange}
+            isLoading={loading}
           />
 
           <Dialog

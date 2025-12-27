@@ -39,10 +39,25 @@ interface Category {
   publishedAt: string;
 }
 
+interface PaginationMeta {
+  page: number;
+  pageSize: number;
+  pageCount: number;
+  total: number;
+}
+
 export default function VehicleGroupsPage() {
   const [data, setData] = useState<VehicleGroup[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState<PaginationMeta>({
+    page: 1,
+    pageSize: 50,
+    pageCount: 1,
+    total: 0,
+  });
+  const [searchTerm, setSearchTerm] = useState('');
+
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<VehicleGroup | null>(null);
@@ -51,12 +66,16 @@ export default function VehicleGroupsPage() {
   });
 
   // Fetch data from API
-  const fetchData = async () => {
+  const fetchData = async (page = 1, pageSize = 50, search = '') => {
     try {
       setLoading(true);
 
       const [vehicleGroupsResponse, categoriesResponse] = await Promise.all([
-        vehicleGroupsAPI.find(),
+        vehicleGroupsAPI.find({
+          'pagination[page]': page,
+          'pagination[pageSize]': pageSize,
+          ...(search && { 'filters[name][$containsi]': search }),
+        }),
         categoriesAPI.find(),
       ]);
 
@@ -65,6 +84,11 @@ export default function VehicleGroupsPage() {
 
       setData(vehicleGroupsData);
       setCategories(categoriesData);
+
+      // Update pagination metadata from response
+      if (vehicleGroupsResponse.meta?.pagination) {
+        setPagination(vehicleGroupsResponse.meta.pagination);
+      }
     } catch (error) {
       console.error('Failed to load vehicle groups:', error);
       toast.error('Failed to load vehicle groups');
@@ -74,7 +98,7 @@ export default function VehicleGroupsPage() {
   };
 
   useEffect(() => {
-    fetchData();
+    fetchData(1, 50, '');
   }, []);
 
   const columns: ColumnDef<VehicleGroup>[] = [
@@ -117,7 +141,7 @@ export default function VehicleGroupsPage() {
     setIsEditDialogOpen(true);
   };
 
-  
+
   const handleSave = async () => {
     try {
       if (editingItem) {
@@ -138,11 +162,39 @@ export default function VehicleGroupsPage() {
       setIsEditDialogOpen(false);
       setIsAddDialogOpen(false);
       setEditingItem(null);
-      fetchData(); // Refetch data
+      fetchData(pagination.page, pagination.pageSize, searchTerm); // Refetch data
     } catch (error) {
       console.error('Failed to save vehicle group:', error);
       toast.error('Failed to save vehicle group');
     }
+  };
+
+  const handleDelete = async (item: VehicleGroup) => {
+    if (!confirm(`Are you sure you want to delete "${item.name}"?`)) {
+      return;
+    }
+
+    try {
+      await vehicleGroupsAPI.delete(item.documentId);
+      toast.success('Vehicle group deleted successfully');
+      fetchData(pagination.page, pagination.pageSize, searchTerm);
+    } catch (error) {
+      console.error('Failed to delete vehicle group:', error);
+      toast.error('Failed to delete vehicle group');
+    }
+  };
+
+  const handlePageChange = (page: number) => {
+    fetchData(page, pagination.pageSize, searchTerm);
+  };
+
+  const handlePageSizeChange = (pageSize: number) => {
+    fetchData(1, pageSize, searchTerm); // Reset to page 1 when changing page size
+  };
+
+  const handleSearchChange = (search: string) => {
+    setSearchTerm(search);
+    fetchData(1, pagination.pageSize, search); // Reset to page 1 when searching
   };
 
   return (
@@ -156,8 +208,14 @@ export default function VehicleGroupsPage() {
             description="Manage vehicle categories and groups"
             onAdd={handleAdd}
             onEdit={handleEdit}
-            searchPlaceholder="Search vehicle groups..."
+            onDelete={handleDelete}
+            searchPlaceholder="Search vehicle groups by name..."
             addButtonText="Add Vehicle Group"
+            pagination={pagination}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+            onSearchChange={handleSearchChange}
+            isLoading={loading}
           />
 
           {/* Add/Edit Dialog */}

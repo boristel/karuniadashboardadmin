@@ -37,10 +37,24 @@ interface Branch {
   whatsapp_number: string | null;
 }
 
+interface PaginationMeta {
+  page: number;
+  pageSize: number;
+  pageCount: number;
+  total: number;
+}
 
 export default function BranchesPage() {
   const [data, setData] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState<PaginationMeta>({
+    page: 1,
+    pageSize: 50,
+    pageCount: 1,
+    total: 0,
+  });
+  const [searchTerm, setSearchTerm] = useState('');
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Branch | null>(null);
   const [formData, setFormData] = useState<Partial<Branch>>({
@@ -55,11 +69,20 @@ export default function BranchesPage() {
   });
 
   // Fetch data from API
-  const fetchData = async () => {
+  const fetchData = async (page = 1, pageSize = 50, search = '') => {
     try {
       setLoading(true);
-      const response = await branchesAPI.find();
+      const response = await branchesAPI.find({
+        'pagination[page]': page,
+        'pagination[pageSize]': pageSize,
+        ...(search && { 'filters[name][$containsi]': search }),
+      });
       setData(response.data || []);
+
+      // Update pagination metadata from response
+      if (response.meta?.pagination) {
+        setPagination(response.meta.pagination);
+      }
     } catch (error) {
       console.error('Failed to fetch branches:', error);
       toast.error('Failed to load branches');
@@ -69,7 +92,7 @@ export default function BranchesPage() {
   };
 
   useEffect(() => {
-    fetchData();
+    fetchData(1, 50, '');
   }, []);
 
   const columns: ColumnDef<Branch>[] = [
@@ -143,7 +166,7 @@ export default function BranchesPage() {
     setIsDialogOpen(true);
   };
 
-  
+
   const handleSave = async () => {
     try {
       if (editingItem) {
@@ -170,11 +193,39 @@ export default function BranchesPage() {
       }
       setIsDialogOpen(false);
       setEditingItem(null);
-      fetchData(); // Refetch data
+      fetchData(pagination.page, pagination.pageSize, searchTerm); // Refetch data
     } catch (error) {
       console.error('Failed to save branch:', error);
       toast.error('Failed to save branch');
     }
+  };
+
+  const handleDelete = async (item: Branch) => {
+    if (!confirm(`Are you sure you want to delete "${item.name}"?`)) {
+      return;
+    }
+
+    try {
+      await branchesAPI.delete(item.documentId);
+      toast.success('Branch deleted successfully');
+      fetchData(pagination.page, pagination.pageSize, searchTerm);
+    } catch (error) {
+      console.error('Failed to delete branch:', error);
+      toast.error('Failed to delete branch');
+    }
+  };
+
+  const handlePageChange = (page: number) => {
+    fetchData(page, pagination.pageSize, searchTerm);
+  };
+
+  const handlePageSizeChange = (pageSize: number) => {
+    fetchData(1, pageSize, searchTerm); // Reset to page 1 when changing page size
+  };
+
+  const handleSearchChange = (search: string) => {
+    setSearchTerm(search);
+    fetchData(1, pagination.pageSize, search); // Reset to page 1 when searching
   };
 
   return (
@@ -188,8 +239,14 @@ export default function BranchesPage() {
             description="Manage all branch locations and information"
             onAdd={handleAdd}
             onEdit={handleEdit}
-            searchPlaceholder="Search branches..."
+            onDelete={handleDelete}
+            searchPlaceholder="Search branches by name..."
             addButtonText="Add Branch"
+            pagination={pagination}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+            onSearchChange={handleSearchChange}
+            isLoading={loading}
           />
 
           {/* Add/Edit Dialog */}
