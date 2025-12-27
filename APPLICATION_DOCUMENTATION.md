@@ -13,6 +13,10 @@ Features a secure, branded login interface with role-based validation (ADMIN onl
 Provides real-time sales overview, recent activity tracking, and quick access to management modules.
 ![Dashboard Overview](docs/images/dashboard.png)
 
+#### Master Data Pages
+Server-side paginated and searchable data management for all master data entities (Vehicle Types, Vehicle Groups, Colors, Supervisors, Branches, Categories).
+Features 50 records per page by default with configurable page size (10/25/50/100) and debounced search.
+
 ---
 
 ## 2. Architecture & Tech Stack
@@ -20,14 +24,16 @@ Provides real-time sales overview, recent activity tracking, and quick access to
 ### Frontend Core
 *   **Framework**: Next.js 14 (SPA / Static Export)
 *   **Language**: TypeScript
-*   **State**: React Context (`AuthContext`)
-*   **UI Library**: Shadcn UI + Tailwind CSS
+*   **State**: React Context (`AuthContext`) + TanStack Query
+*   **UI Library**: Shadcn UI + Tailwind CSS + MUI v7 (DataGrids)
 *   **Routing**: Next.js App Router (Client-side usage)
+*   **Tables**: TanStack Table v8 (CRUDTable) + MUI X DataGrid v8
 
 ### Integration
 *   **Backend**: Strapi CMS (`NEXT_PUBLIC_STRAPI_URL`)
 *   **Maps**: Google Maps JS API for Sales Monitoring
 *   **PDF**: `@react-pdf/renderer` for SPK Generation
+*   **Pagination**: Server-side pagination with Strapi v4 (`pagination[page]`, `pagination[pageSize]`)
 
 ### Deployment Strategy (Dockerized SPA)
 To solve environment mismatches, we use a custom **Docker build process**:
@@ -48,11 +54,19 @@ To solve environment mismatches, we use a custom **Docker build process**:
 │   ├── app/                # Application Routes
 │   │   ├── auth/           # Login Logic
 │   │   ├── dashboard/      # Protected Admin Routes
+│   │   │   ├── master-data/ # CRUD Modules (Vehicle Types, Groups, Colors, etc.)
+│   │   │   ├── sales-monitoring/ # Live Sales Tracking
+│   │   │   └── spk-management/ # Order Management
 │   │   └── layout.tsx      # Root Provider Setup
 │   ├── components/         # Shared UI Components
+│   │   ├── ui/             # Shadcn UI Components
+│   │   ├── CRUDTable.tsx   # Server-side Paginated Table
+│   │   ├── MUIDataGrid.tsx # MUI X DataGrid Wrapper
 │   │   ├── ProtectedRoute.tsx # Auth Guard
 │   │   └── DashboardLayout.tsx # Sidebar/Header
 │   ├── contexts/           # Auth State Management
+│   ├── providers/          # React Query Provider
+│   ├── hooks/              # Custom React Hooks
 │   ├── services/           # Axios API Layer
 │   └── types/              # TypeScript Models
 ├── Dockerfile              # Production Build Config
@@ -70,6 +84,42 @@ To solve environment mismatches, we use a custom **Docker build process**:
 *   **Interceptor**: automatically adds `Authorization` headers.
 *   **Guard**: `ProtectedRoute` prevents unauthorized access to `/dashboard`.
 *   **Timeout**: Dashboard data fetching has a 15s safety timeout to prevent hanging.
+
+### Master Data CRUD Features
+All master data pages (Vehicle Types, Vehicle Groups, Colors, Supervisors, Branches, Categories) feature:
+
+*   **Server-Side Pagination**: Default 50 records per page
+*   **Records Per Page Selector**: User can choose 10, 25, 50, or 100 records
+*   **Server-Side Search**: Case-insensitive search with 300ms debounce
+*   **Loading Indicators**: Visual feedback during data fetching
+*   **Pagination Info**: "Showing 1 to 50 of 150 records (Page 1 of 3)"
+*   **Create/Edit/Delete Modal Dialogs**: For all CRUD operations
+
+**Strapi v4 Pagination Format:**
+```javascript
+// Request parameters
+'pagination[page]': 1,
+'pagination[pageSize]': 50,
+
+// Response metadata
+response.meta.pagination = {
+  page: 1,
+  pageSize: 50,
+  pageCount: 3,
+  total: 150
+}
+```
+
+**Strapi v4 Search Format:**
+```javascript
+// Case-insensitive partial match
+'filters[name][$containsi]': 'searchTerm'
+```
+
+**Performance Optimizations:**
+- `useCallback` hooks for stable function references
+- `React.memo` wrapper on CRUDTable to prevent re-renders
+- Search input maintains focus during typing (no disabled state toggle)
 
 ### Deployment (Coolify)
 **Crucial**: Do not use "Nixpacks". Use **Dockerfile** build pack.
